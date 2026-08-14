@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>91.5 Chai Pe Gaane | Live Radio</title>
+  <title>Chai Pe Gaane | Live Radio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -83,7 +83,7 @@
     <!-- Center Hero Text -->
     <div class="flex-1 flex flex-col items-center justify-center -mt-16 pointer-events-none relative">
       <h1 class="text-[4.5rem] sm:text-[7rem] md:text-[9rem] font-extrabold text-[#fdf6e3] leading-none tracking-tight text-center drop-shadow-2xl" style="text-shadow: 0 10px 40px rgba(0,0,0,0.8);">चाय पे<br>गाने</h1>
-      <p class="mt-4 text-xs sm:text-sm tracking-[0.4em] uppercase text-white/70 font-mono text-center">91.5 Chai Pe Gaane - Open All Hours</p>
+      <p class="mt-4 text-xs sm:text-sm tracking-[0.4em] uppercase text-white/70 font-mono text-center">Chai Pe Gaane - Open All Hours</p>
       
       <!-- Tuning / Ad Banner -->
       <div id="tuning-banner" class="absolute bottom-[-4rem] bg-[#fce1b4] text-[#1c1511] px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase opacity-0 transition-opacity duration-500 shadow-lg">
@@ -160,7 +160,7 @@
       
       <div class="max-w-2xl mx-auto w-full flex-1 overflow-y-auto no-scrollbar pb-10">
         <h2 class="text-3xl font-extrabold mb-4 font-display">About Chai Pe Gaane</h2>
-        <p class="text-sm text-[#fce1b4]/70 mb-10 leading-relaxed font-mono">Welcome to 91.5 Chai Pe Gaane, a retro audio radio broadcasting classic Odia and Hindi songs from the golden cassette era. Sit back, relax, and enjoy the timeless melodies. Open 24 hours.</p>
+        <p class="text-sm text-[#fce1b4]/70 mb-10 leading-relaxed font-mono">Welcome to Chai Pe Gaane, a retro audio radio broadcasting classic Odia and Hindi songs from the golden cassette era. Sit back, relax, and enjoy the timeless melodies. Open 24 hours.</p>
         
         <h3 class="text-lg font-bold mb-4 border-b border-white/10 pb-3 font-display uppercase tracking-widest text-[#fce1b4]/90">Radio Playlists</h3>
         <div class="flex flex-col gap-3">
@@ -543,6 +543,15 @@
     // Initialize view from URL
     const initialView = urlParams.get('view') || 'home';
     navigateTo(initialView, false);
+    
+    // Initialize Tabs UI
+    if (currentCategory === 'hindi') {
+      tabHindi.classList.add('active');
+      tabOdia.classList.remove('active');
+    } else {
+      tabOdia.classList.add('active');
+      tabHindi.classList.remove('active');
+    }
 
     // --- Drawer Logic ---
     const drawerBackdrop = document.getElementById('drawer-backdrop');
@@ -725,8 +734,6 @@
 
     // --- Songs List View Logic ---
     function switchCategory(cat) {
-      if (currentCategory === cat) return;
-      
       const viewSongsDiv = document.getElementById('view-songs');
 
       currentCategory = cat;
