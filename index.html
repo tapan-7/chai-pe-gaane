@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>91.5 TAPRI FM | Live Radio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['sans-serif'],
+            mono: ['Courier New', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .pill-btn {
+        @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 bg-black/30 hover:bg-white/10 text-white/80 hover:text-white backdrop-blur-md transition-all text-xs tracking-wider uppercase font-mono cursor-pointer;
+      }
+      .pill-btn.active {
+        @apply bg-white/20 text-white border-white/40;
+      }
+    }
+    .bg-layer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: -10;
+      overflow: hidden;
+      background-color: #0a0400;
+    }
+    .bg-layer img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      filter: contrast(1.1) brightness(0.6) saturate(1.2);
+    }
+    .vignette {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.8) 95%),
+                  linear-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.1) 50%);
+      background-size: 100% 100%, 100% 4px;
+      pointer-events: none;
+    }
+    
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-black text-white font-display antialiased overflow-hidden selection:bg-white/20">
+
+  <div class="bg-layer">
+    <img src="background.png" alt="Background">
+    <div class="vignette"></div>
+  </div>
+
+  <!-- HOME VIEW -->
+  <div id="view-home" class="absolute inset-0 z-10 flex flex-col p-4 sm:p-8">
+    <!-- Top Nav -->
+    <div class="flex justify-between items-start sm:items-center">
+      <div class="font-mono text-xs tracking-[0.2em] text-white/60" id="clock-display">
+        12:00 PM
+      </div>
+      
+      <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-[10px] font-mono tracking-widest text-green-400">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
+        746 ONLINE
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 max-w-[50%] justify-end">
+        <button class="pill-btn" onclick="navigateTo('songs')">Songs</button>
+        <button class="pill-btn" onclick="openDrawer()">Playlists</button>
+      </div>
+    </div>
+
+    <!-- Center Hero Text -->
+    <div class="flex-1 flex flex-col items-center justify-center -mt-16 pointer-events-none relative">
+      <h1 class="text-[5.5rem] sm:text-[9rem] font-extrabold text-[#fdf6e3] leading-none tracking-tight text-center drop-shadow-2xl" style="text-shadow: 0 10px 40px rgba(0,0,0,0.8);">टपरी<br>सैलून</h1>
+      <p class="mt-4 text-xs sm:text-sm tracking-[0.4em] uppercase text-white/70 font-mono text-center">91.5 Tapri FM - Open All Hours</p>
+      
+      <!-- Tuning / Ad Banner -->
+      <div id="tuning-banner" class="absolute bottom-[-4rem] bg-[#fce1b4] text-[#1c1511] px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase opacity-0 transition-opacity duration-500 shadow-lg">
+        Tuning Signal... (Ads may play)
+      </div>
+    </div>
+  </div>
+
+  <!-- SONGS VIEW -->
+  <div id="view-songs" class="hidden absolute inset-0 z-10 mx-auto w-full max-w-3xl px-4 pt-5 pb-40 sm:px-8 sm:pt-8 overflow-y-auto no-scrollbar">
+    <nav class="flex items-center gap-2 text-xs font-mono uppercase tracking-wider sticky top-0 bg-transparent py-4 z-20 mb-4 border-b border-white/10">
+      <button class="pill-btn" onclick="navigateTo('home')">← Radio</button>
+      <button class="pill-btn active" id="tab-hindi" onclick="switchCategory('hindi')">Old Hindi</button>
+      <button class="pill-btn" id="tab-odia" onclick="switchCategory('odia')">Old Odia</button>
+    </nav>
+    <header class="mb-8 pb-6 border-b border-white/10">
+      <p class="font-mono text-[0.7rem] tracking-[0.22em] uppercase text-white/50" id="song-count">120 records</p>
+      <h1 class="mt-2 font-display text-3xl leading-tight font-extrabold sm:text-5xl text-[#fce1b4]" id="category-title">सारे गाने</h1>
+      <p class="mt-4 max-w-xl text-sm leading-relaxed text-white/60 font-mono">Every record in the library, listed by release order. Click a track to play it immediately.</p>
+    </header>
+    <ol class="divide-y divide-white/5 pb-28" id="songs-list-rows">
+      <!-- Tracks populated here -->
+    </ol>
+  </div>
+
+  <!-- Floating Pill Player (Persistent) -->
+  <div class="fixed bottom-12 left-1/2 -translate-x-1/2 w-[92%] sm:w-[500px] bg-[#1c1511]/90 backdrop-blur-xl border border-white/10 rounded-full px-3 py-2 flex items-center justify-between shadow-2xl transition-transform duration-300 pointer-events-auto z-40" id="main-player">
+    <!-- Album Art & Info -->
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+      <div class="w-12 h-12 rounded-full bg-black flex-shrink-0 overflow-hidden shadow-inner border border-white/5 relative">
+        <img src="" id="player-thumb" class="w-full h-full object-cover scale-150 transition-all duration-1000">
+        <div class="absolute inset-0 border-[3px] border-black/20 rounded-full pointer-events-none"></div>
+      </div>
+      
+      <div class="flex flex-col flex-1 min-w-0 pr-4">
+        <div class="text-[#fce1b4] text-xs font-bold truncate leading-tight mb-1" id="player-title">Tuning In...</div>
+        <div class="text-[#fce1b4]/50 text-[10px] truncate uppercase tracking-wider" id="player-artist">Tapri FM</div>
+        
+        <div class="flex items-center gap-2 mt-1">
+          <span class="text-[9px] text-[#fce1b4]/40 font-mono" id="time-current">0:00</span>
+          <div class="relative flex-1 flex items-center group">
+            <input type="range" id="seek-slider" class="w-full h-1 bg-white/10 rounded-full appearance-none outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-[#fce1b4] [&::-webkit-slider-thumb]:rounded-full z-10" min="0" max="100" value="0">
+            <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-[#fce1b4]/40 rounded-full pointer-events-none" id="seek-progress" style="width: 0%"></div>
+          </div>
+          <span class="text-[9px] text-[#fce1b4]/40 font-mono" id="time-duration">0:00</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Controls -->
+    <div class="flex items-center gap-1 sm:gap-3 flex-shrink-0 px-2 border-l border-white/5 pl-3">
+      <button class="w-10 h-10 rounded-full bg-[#fce1b4] text-[#1c1511] flex items-center justify-center hover:scale-105 hover:bg-white transition-all shadow-lg" onclick="togglePlay()" id="btn-play-pause">
+        <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24" id="icon-play"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button class="w-8 h-8 rounded-full text-[#fce1b4]/60 hover:text-[#fce1b4] hover:bg-white/5 flex items-center justify-center transition-all" onclick="nextSong()">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+      </button>
+    </div>
+  </div>
+  
+  <div class="fixed bottom-4 left-1/2 -translate-x-1/2 text-[9px] tracking-[0.2em] uppercase text-white/30 font-mono z-40 pointer-events-none">
+    contact: sumansinghu30@gmail.com
+  </div>
+
+  <!-- Slide-up Drawer -->
+  <div id="drawer" class="fixed inset-0 z-50 pointer-events-none flex flex-col justify-end">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-500" id="drawer-backdrop" onclick="closeDrawer()"></div>
+    
+    <!-- Panel -->
+    <div class="relative bg-[#1a1512] text-[#fce1b4] w-full max-h-[85vh] rounded-t-[2rem] border-t border-white/10 p-6 sm:p-10 transform translate-y-full transition-transform duration-500 pointer-events-auto flex flex-col shadow-2xl" id="drawer-panel">
+      <!-- Drag handle -->
+      <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-8 cursor-pointer hover:bg-white/40 transition-colors" onclick="closeDrawer()"></div>
+      
+      <div class="max-w-2xl mx-auto w-full flex-1 overflow-y-auto no-scrollbar pb-10">
+        <h2 class="text-3xl font-extrabold mb-4 font-display">About Tapri Saloon</h2>
+        <p class="text-sm text-[#fce1b4]/70 mb-10 leading-relaxed font-mono">Welcome to 91.5 Tapri FM, a retro audio radio broadcasting classic Odia and Hindi songs from the golden cassette era. Sit back, relax, and enjoy the timeless melodies. Open 24 hours.</p>
+        
+        <h3 class="text-lg font-bold mb-4 border-b border-white/10 pb-3 font-display uppercase tracking-widest text-[#fce1b4]/90">Radio Playlists</h3>
+        <div class="flex flex-col gap-3">
+          
+          <button class="group flex items-center justify-between p-4 bg-black/20 hover:bg-white/5 rounded-xl border border-white/5 hover:border-white/20 transition-all text-left" onclick="switchCategory('hindi'); navigateTo('songs'); closeDrawer();">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-full bg-[#fce1b4]/10 flex items-center justify-center text-[#fce1b4] group-hover:scale-110 transition-transform">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+              </div>
+              <div>
+                <div class="font-bold text-[#fce1b4]">Old Hindi Classics</div>
+                <div class="text-[10px] text-[#fce1b4]/50 font-mono uppercase tracking-wider mt-1">120 tracks • The Golden Era</div>
+              </div>
+            </div>
+            <div class="flex items-center justify-center w-8 h-8 rounded-full border border-white/10 group-hover:border-[#fce1b4] text-white/30 group-hover:text-[#fce1b4] transition-colors">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </button>
+          
+          <button class="group flex items-center justify-between p-4 bg-black/20 hover:bg-white/5 rounded-xl border border-white/5 hover:border-white/20 transition-all text-left" onclick="switchCategory('odia'); navigateTo('songs'); closeDrawer();">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-full bg-[#fce1b4]/10 flex items-center justify-center text-[#fce1b4] group-hover:scale-110 transition-transform">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+              </div>
+              <div>
+                <div class="font-bold text-[#fce1b4]">Old Odia Classics</div>
+                <div class="text-[10px] text-[#fce1b4]/50 font-mono uppercase tracking-wider mt-1">120 tracks • Evergreen Hits</div>
+              </div>
+            </div>
+            <div class="flex items-center justify-center w-8 h-8 rounded-full border border-white/10 group-hover:border-[#fce1b4] text-white/30 group-hover:text-[#fce1b4] transition-colors">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="youtube-player-container"
+    style="
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      left: -10px;
+      top: -10px;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+    "
+  >
+    <div id="youtube-hidden-player"></div>
+  </div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    const SONG_REPOSITORY = {
+      hindi: [
+        { id: "A9arc2hWNOw", title: "Lag Ja Gale", artist: "Lata Mangeshkar" },
+        { id: "", title: "Aap Ki Nazron Ne Samjha", artist: "Lata Mangeshkar" },
+        { id: "", title: "Ajib Dastan Hai Yeh", artist: "Lata Mangeshkar" },
+        { id: "", title: "Aaja Piya Tohe Pyar Doon", artist: "Lata Mangeshkar" },
+        { id: "", title: "Piya Tose Naina Laage Re", artist: "Lata Mangeshkar" },
+        { id: "", title: "Tere Bina Zindagi Se", artist: "Lata Mangeshkar, Kishore Kumar" },
+        { id: "", title: "Tum Aa Gaye Ho Noor Aa Gaya", artist: "Lata Mangeshkar, Kishore Kumar" },
+        { id: "", title: "Kora Kagaz Tha Yeh Man Mera", artist: "Lata Mangeshkar, Kishore Kumar" },
+        { id: "", title: "Kya Yahi Pyar Hai", artist: "Kishore Kumar, Lata Mangeshkar" },
+        { id: "", title: "Aap Ki Aankhon Mein Kuch", artist: "Kishore Kumar, Lata Mangeshkar" },
+        { id: "", title: "Bahon Mein Chale Aao", artist: "Lata Mangeshkar" },
+        { id: "", title: "Raina Beeti Jaye", artist: "Lata Mangeshkar" },
+        { id: "", title: "Naam Gum Jayega", artist: "Lata Mangeshkar, Bhupinder Singh" },
+        { id: "", title: "Tujhse Naraz Nahi Zindagi", artist: "Lata Mangeshkar" },
+        { id: "", title: "Mere Naina Sawan Bhadon", artist: "Lata Mangeshkar / Kishore Kumar" },
+        { id: "", title: "Naina Barse Rimjhim", artist: "Lata Mangeshkar" },
+        { id: "", title: "Aye Dil-e-Nadaan", artist: "Lata Mangeshkar" },
+        { id: "", title: "Wada Na Todo", artist: "Lata Mangeshkar" },
+        { id: "", title: "Chalte Chalte Yun Hi Koi", artist: "Lata Mangeshkar" },
+        { id: "", title: "Inhi Logon Ne", artist: "Lata Mangeshkar" },
+        { id: "", title: "Lag Ja Gale Se Phir", artist: "Lata Mangeshkar" },
+        { id: "", title: "O Mere Dil Ke Chain", artist: "Kishore Kumar" },
+        { id: "", title: "Pal Pal Dil Ke Paas", artist: "Kishore Kumar" },
+        { id: "", title: "Mere Samne Wali Khidki Mein", artist: "Kishore Kumar" },
+        { id: "", title: "Roop Tera Mastana", artist: "Kishore Kumar" },
+        { id: "", title: "Yeh Shaam Mastani", artist: "Kishore Kumar" },
+        { id: "", title: "Musafir Hoon Yaaron", artist: "Kishore Kumar" },
+        { id: "", title: "Zindagi Ek Safar Hai Suhana", artist: "Kishore Kumar" },
+        { id: "", title: "Chookar Mere Man Ko", artist: "Kishore Kumar" },
+        { id: "", title: "Humein Tumse Pyar Kitna", artist: "Kishore Kumar" },
+        { id: "", title: "Mere Sapno Ki Rani", artist: "Kishore Kumar" },
+        { id: "", title: "Yeh Jo Mohabbat Hai", artist: "Kishore Kumar" },
+        { id: "", title: "Pyar Deewana Hota Hai", artist: "Kishore Kumar" },
+        { id: "", title: "Khaike Paan Banaraswala", artist: "Kishore Kumar" },
+        { id: "", title: "Aanewala Pal Janewala Hai", artist: "Kishore Kumar" },
+        { id: "", title: "Raat Kali Ek Khwab Mein Aayi", artist: "Kishore Kumar" },
+        { id: "", title: "Diye Jalte Hain", artist: "Kishore Kumar" },
+        { id: "", title: "Agar Tum Na Hote", artist: "Kishore Kumar" },
+        { id: "", title: "O Saathi Re", artist: "Kishore Kumar" },
+        { id: "", title: "Mere Dil Mein Aaj Kya Hai", artist: "Kishore Kumar" },
+        { id: "", title: "Ek Ajnabee Haseena Se", artist: "Kishore Kumar" },
+        { id: "", title: "Aane Wala Pal", artist: "Kishore Kumar" },
+        { id: "", title: "Tum Bin Jaun Kahan", artist: "Kishore Kumar" },
+        { id: "", title: "Neele Neele Ambar Par", artist: "Kishore Kumar" },
+        { id: "", title: "Zindagi Ke Safar Mein", artist: "Kishore Kumar" },
+        { id: "", title: "Chookar Mere Man Ko", artist: "Kishore Kumar" },
+        { id: "", title: "Pal Pal Dil Ke Paas", artist: "Kishore Kumar" },
+        { id: "", title: "Humein Aur Jeene Ki", artist: "Kishore Kumar" },
+        { id: "", title: "Mere Mehboob Qayamat Hogi", artist: "Kishore Kumar" },
+        { id: "", title: "Yeh Kya Hua", artist: "Kishore Kumar" },
+        { id: "", title: "Gulabi Aankhen", artist: "Mohammed Rafi" },
+        { id: "", title: "Likhe Jo Khat Tujhe", artist: "Mohammed Rafi" },
+        { id: "", title: "Kya Hua Tera Wada", artist: "Mohammed Rafi" },
+        { id: "", title: "Tum Jo Mil Gaye Ho", artist: "Mohammed Rafi" },
+        { id: "", title: "Baharon Phool Barsao", artist: "Mohammed Rafi" },
+        { id: "", title: "Teri Aankhon Ke Siva", artist: "Mohammed Rafi" },
+        { id: "", title: "Chaudhvin Ka Chand Ho", artist: "Mohammed Rafi" },
+        { id: "", title: "Khoya Khoya Chand", artist: "Mohammed Rafi" },
+        { id: "", title: "Abhi Na Jao Chhod Kar", artist: "Mohammed Rafi, Asha Bhosle" },
+        { id: "", title: "Jo Wada Kiya Woh Nibhana Padega", artist: "Mohammed Rafi, Lata Mangeshkar" },
+        { id: "", title: "Din Dhal Jaye", artist: "Mohammed Rafi" },
+        { id: "", title: "Yeh Duniya Yeh Mehfil", artist: "Mohammed Rafi" },
+        { id: "", title: "Aap Ke Haseen Rukh Pe", artist: "Mohammed Rafi" },
+        { id: "", title: "Pukarta Chala Hoon Main", artist: "Mohammed Rafi" },
+        { id: "", title: "Teri Pyari Pyari Surat Ko", artist: "Mohammed Rafi" },
+        { id: "", title: "Tumse Achha Kaun Hai", artist: "Mohammed Rafi" },
+        { id: "", title: "Aaja Tujhko Pukare Mera Pyar", artist: "Mohammed Rafi, Suman Kalyanpur" },
+        { id: "", title: "Aye Gulbadan", artist: "Mohammed Rafi" },
+        { id: "", title: "Pardesiyon Se Na Ankhiyan Milana", artist: "Mohammed Rafi" },
+        { id: "", title: "Ehsan Tera Hoga Mujh Par", artist: "Mohammed Rafi" },
+        { id: "", title: "Ashaon Ke Sawan Mein", artist: "Mohammed Rafi, Lata Mangeshkar" },
+        { id: "", title: "Main Zindagi Ka Saath", artist: "Mohammed Rafi" },
+        { id: "", title: "Akele Akele Kahan Ja Rahe Ho", artist: "Mohammed Rafi" },
+        { id: "", title: "Yun To Maine Lakh Haseen", artist: "Mohammed Rafi" },
+        { id: "", title: "Chura Liya Hai Tumne Jo Dil Ko", artist: "Asha Bhosle, Mohammed Rafi" },
+        { id: "", title: "Parde Mein Rehne Do", artist: "Asha Bhosle" },
+        { id: "", title: "Dum Maro Dum", artist: "Asha Bhosle" },
+        { id: "", title: "In Aankhon Ki Masti", artist: "Asha Bhosle" },
+        { id: "", title: "Yeh Mera Dil", artist: "Asha Bhosle" },
+        { id: "", title: "Jhumka Gira Re", artist: "Asha Bhosle" },
+        { id: "", title: "O Haseena Zulfonwali", artist: "Asha Bhosle, Mohammed Rafi" },
+        { id: "", title: "Aaja Aaja Main Hoon Pyar Tera", artist: "Asha Bhosle, Mohammed Rafi" },
+        { id: "", title: "Jaane Jaan Dhoondhta", artist: "Asha Bhosle, Kishore Kumar" },
+        { id: "", title: "Raat Akeli Hai", artist: "Asha Bhosle" },
+        { id: "", title: "Mera Kuchh Saamaan", artist: "Asha Bhosle" },
+        { id: "", title: "Ab Ke Baras Bhejo", artist: "Asha Bhosle" },
+        { id: "", title: "Piya Tu Ab To Aaja", artist: "Asha Bhosle" },
+        { id: "", title: "In Aankhon Ki Masti", artist: "Asha Bhosle" },
+        { id: "", title: "Mera Kuchh Saamaan", artist: "Asha Bhosle" },
+        { id: "", title: "Jab Chhaye Mera Jadoo", artist: "Asha Bhosle" },
+        { id: "", title: "Kabhi Kabhi Mere Dil Mein", artist: "Mukesh" },
+        { id: "", title: "Kisi Ki Muskurahaton Pe", artist: "Mukesh" },
+        { id: "", title: "Jeena Yahan Marna Yahan", artist: "Mukesh" },
+        { id: "", title: "Suhana Safar Aur Yeh Mausam", artist: "Mukesh" },
+        { id: "", title: "Dost Dost Na Raha", artist: "Mukesh" },
+        { id: "", title: "Kahin Door Jab Din Dhal Jaye", artist: "Mukesh" },
+        { id: "", title: "Main Pal Do Pal Ka Shayar", artist: "Mukesh" },
+        { id: "", title: "Chandan Sa Badan", artist: "Mukesh" },
+        { id: "", title: "Oh Re Taal Mile Nadi Ke Jal Mein", artist: "Mukesh" },
+        { id: "", title: "Sawan Ka Mahina", artist: "Mukesh, Lata Mangeshkar" },
+        { id: "", title: "Ek Pyar Ka Nagma Hai", artist: "Lata Mangeshkar, Mukesh" },
+        { id: "", title: "Kabhi Kabhi Mere Dil Mein", artist: "Mukesh" },
+        { id: "", title: "Awaara Hoon", artist: "Mukesh" },
+        { id: "", title: "Dum Bhar Jo Udhar Munh Phere", artist: "Mukesh, Lata Mangeshkar" },
+        { id: "", title: "Woh Jab Yaad Aaye", artist: "Lata Mangeshkar, Mohammed Rafi" },
+        { id: "", title: "Aaja Tujhko Pukare Mera Pyar", artist: "Mohammed Rafi, Suman Kalyanpur" },
+        { id: "", title: "Tumse Achha Kaun Hai", artist: "Mohammed Rafi" },
+        { id: "", title: "Mere Mehboob Tujhe", artist: "Mohammed Rafi" },
+        { id: "", title: "Deewana Hua Badal", artist: "Mohammed Rafi, Asha Bhosle" },
+        { id: "", title: "Isharon Isharon Mein", artist: "Mohammed Rafi, Asha Bhosle" },
+        { id: "", title: "Yeh Chand Sa Roshan Chehra", artist: "Mohammed Rafi" },
+        { id: "", title: "Aaja Aaja Main Hoon Pyar Tera", artist: "Mohammed Rafi, Asha Bhosle" },
+        { id: "", title: "O Mere Sona Re", artist: "Mohammed Rafi, Asha Bhosle" },
+        { id: "", title: "Tumne Mujhe Dekha", artist: "Mohammed Rafi" },
+        { id: "", title: "Aane Se Uske Aaye Bahar", artist: "Mohammed Rafi" },
+        { id: "", title: "Teri Galiyon Mein", artist: "Mohammed Rafi" },
+        { id: "", title: "Main Gaoon Tum So Jao", artist: "Mohammed Rafi" },
+        { id: "", title: "Bhanware Ki Gunjan", artist: "Kishore Kumar" },
+        { id: "", title: "Goom Hai Kisi Ke Pyar Mein", artist: "Kishore Kumar, Lata Mangeshkar" },
+        { id: "", title: "Achha To Hum Chalte Hain", artist: "Lata Mangeshkar, Kishore Kumar" }
+      ],
+      odia: [
+        { id: "", title: "Jajabara Mana Mora", artist: "Akshaya Mohanty" },
+        { id: "", title: "Alo Mani", artist: "Akshaya Mohanty" },
+        { id: "", title: "Eka Sangey", artist: "Akshaya Mohanty" },
+        { id: "", title: "Nani Dekh Chena", artist: "Akshaya Mohanty" },
+        { id: "", title: "Snehara Basanti", artist: "Akshaya Mohanty" },
+        { id: "", title: "Toro Ei Khilikhili", artist: "Akshaya Mohanty" },
+        { id: "", title: "Kumbha Jodi Jodi", artist: "Akshaya Mohanty" },
+        { id: "", title: "Dasta Bele Chala", artist: "Akshaya Mohanty" },
+        { id: "", title: "Mistry O Mistry", artist: "Akshaya Mohanty" },
+        { id: "", title: "Olata Brukshe Kheluchhi", artist: "Akshaya Mohanty" },
+        { id: "", title: "Jhilmil Raate", artist: "Akshaya Mohanty" },
+        { id: "", title: "Lolly Pop", artist: "Akshaya Mohanty" },
+        { id: "", title: "O Radhe", artist: "Akshaya Mohanty" },
+        { id: "", title: "Khoka Bhai Geeta", artist: "Akshaya Mohanty" },
+        { id: "", title: "E Kie Ki", artist: "Akshaya Mohanty" },
+        { id: "", title: "Biradi Biradi", artist: "Akshaya Mohanty" },
+        { id: "", title: "Premika Hebaku Mora", artist: "Akshaya Mohanty" },
+        { id: "", title: "Premikara Bari Aare", artist: "Akshaya Mohanty" },
+        { id: "", title: "Kabata Kholila Priye", artist: "Akshaya Mohanty" },
+        { id: "", title: "Gharu Bahariley", artist: "Akshaya Mohanty" },
+        { id: "", title: "Machha Hela Kata", artist: "Akshaya Mohanty" },
+        { id: "", title: "Sahira Piley", artist: "Akshaya Mohanty" },
+        { id: "", title: "Smruti Tume", artist: "Akshaya Mohanty" },
+        { id: "", title: "Chandramallika Hase", artist: "Akshaya Mohanty" },
+        { id: "", title: "Prema Kemiti Hue", artist: "Akshaya Mohanty" },
+        { id: "", title: "Mu Jauthili", artist: "Akshaya Mohanty" },
+        { id: "", title: "Tume Lautil Nahi", artist: "Various / Old Odia" },
+        { id: "", title: "Dinja Rajani Pahere", artist: "Balakrushna Das" },
+        { id: "", title: "Chanhena Chanhena Michhe", artist: "Nirmala Mishra" },
+        { id: "", title: "Tu Ki Paradeshi Nija", artist: "Old Odia classic" },
+        { id: "", title: "Mayurigo Tama Akash Mun", artist: "Mohammed Rafi" },
+        { id: "", title: "Ei Chhota Kathatie Bhulo Na", artist: "Old Odia classic" },
+        { id: "", title: "Udi Udi Udi Jaa Re", artist: "Nirmala Mishra, Pranab Pattnaik" },
+        { id: "", title: "Ei Bhara Jahana Rati", artist: "Nirmala Mishra, Akshaya Mohanty" },
+        { id: "", title: "Gele Gele Gele Gori", artist: "Sipra Bose, Akshaya Mohanty" },
+        { id: "", title: "Jibane Sapana Jete", artist: "Old Odia classic" },
+        { id: "", title: "Bou Lo Ki Kahibi", artist: "Old Odia classic" },
+        { id: "", title: "Alapa Hasare", artist: "Old Odia classic" },
+        { id: "", title: "Jochhana Luchana", artist: "Old Odia classic" },
+        { id: "", title: "Mayabini Ei Rati Ekakini Jae Biti", artist: "Nirmala Mishra" },
+        { id: "", title: "Na Mara Na Etiki Minati", artist: "Nirmala Mishra" },
+        { id: "", title: "Barijakshi Manaru Mana Maride Re", artist: "Vani Jayram, Sudha" },
+        { id: "", title: "Nacha Nacha Sajani Nachare", artist: "Raghunath Panigrahi" },
+        { id: "", title: "Jogire Khoju Kahin", artist: "Vani Jayram" },
+        { id: "", title: "Eka Deshe Thile", artist: "Md. Sikandar Alam" },
+        { id: "", title: "Mukunda Murari", artist: "Vani Jayram, Sudha, Prafulla Kar" },
+        { id: "", title: "Ghumu Ghumu Ghumure Para", artist: "Bhikari Charan Bal" },
+        { id: "", title: "Hayre Hay Garaje Megha", artist: "Prafulla Kar" },
+        { id: "", title: "Megha Barashila", artist: "Old Odia classic" },
+        { id: "", title: "Majhire Majhire", artist: "Pranab Pattnaik" },
+        { id: "", title: "Dheu Dheuka Pahada Tale", artist: "Akshaya Mohanty, Nirmala Mishra" },
+        { id: "", title: "Nakara Nakara Mana Tile Bhabana", artist: "Pranab Pattnaik" },
+        { id: "", title: "Tora Fusula Fusuli Katha", artist: "Akshaya Mohanty" },
+        { id: "", title: "Jai Phula Re Keli Kadam Tale", artist: "Old Odia classic" },
+        { id: "", title: "Eka Eka Mane Mane", artist: "Nirmala Mishra" },
+        { id: "", title: "Manara Shamuka Buke Ghumae", artist: "Trupti Das, Akshaya Mohanty" },
+        { id: "", title: "Tora Chiki Miki Chiki Miki Jari Sadhi", artist: "Akshaya Mohanty" },
+        { id: "", title: "Mo Sange Lagna Re", artist: "Akshaya Mohanty, Shipra Bose" },
+        { id: "", title: "E Mayabini Bana Jochhana Chhaya", artist: "Sikandar Alam, Nirmala Mishra" },
+        { id: "", title: "Dihudi Jaluchhi", artist: "Md. Sikandar Alam" },
+        { id: "", title: "Marinele Mahapatre", artist: "Balakrushna Das" },
+        { id: "", title: "Swargadapi Gariyasi Janani Ma", artist: "Shyamal Mitra" },
+        { id: "", title: "Nua Hoi Bohu Ti Jae Bapa Ghara", artist: "Akshaya Mohanty" },
+        { id: "", title: "Mo Mana Bina Ra Tare", artist: "Nirmala Mishra" },
+        { id: "", title: "Kuanra Punei Janha Lo", artist: "Sukhalata Mohanty, Bina Mohanty" },
+        { id: "", title: "Dure Tume Dure Dure", artist: "Nirmala Mishra" },
+        { id: "", title: "Ja Ja Ja Ja Jare Ja", artist: "Sikandar Alam, Shipra Bose" },
+        { id: "", title: "Mara Na Akhi Chhuri Re", artist: "Sikandar Alam, Shipra Bose" },
+        { id: "", title: "Kete Je Fula Mo Bane", artist: "Shipra Bose" },
+        { id: "", title: "Dhire Dhire Chale Rai", artist: "Akshaya Mohanty" },
+        { id: "", title: "Gori Gori Gori Ago Nila Pari", artist: "Akshaya Mohanty" },
+        { id: "", title: "Jete Akhi Thila Babu", artist: "Akshaya Mohanty" },
+        { id: "", title: "Bedana Sagara Tire", artist: "Pranab Pattnaik" },
+        { id: "", title: "Mun Je Bhasi Sapane", artist: "Nirmala Mishra" },
+        { id: "", title: "Chhaya Pachhe Pachhe", artist: "Akshaya Mohanty" },
+        { id: "", title: "Radhika Mohana Ebe Pada Tale", artist: "Sandhya Mukherjee" },
+        { id: "", title: "E Nuhen Kahani", artist: "Pranab Pattnaik" },
+        { id: "", title: "Kichhi Au Kuhana", artist: "S. Janaki, Md. Sikandar Alam" },
+        { id: "", title: "Dakuchi Rahi Rahi", artist: "H. P. Geeta" },
+        { id: "", title: "Suna Bhauja Ago", artist: "S. Janaki" },
+        { id: "", title: "Pyar Mohabat", artist: "Md. Sikandar Alam" },
+        { id: "", title: "Mo Ganthi Dhana", artist: "S. Janaki, Pranab Pattnaik" },
+        { id: "", title: "Purila Asha Mora", artist: "Narayan Prasad Singh" },
+        { id: "", title: "Hati Jhulu Thae", artist: "Brundabana Jena" },
+        { id: "", title: "Sajani Kahuchi Muhin", artist: "Brundabana Jena" },
+        { id: "", title: "Mili Mishi Thile", artist: "Narayan Prasad Singh" },
+        { id: "", title: "Eka Au Eka Mishi", artist: "Brundabana Jena" },
+        { id: "", title: "Ma'lo Mahima Mayi", artist: "Brundabana Jena" },
+        { id: "", title: "Jibana Jamuna Nai", artist: "Pranab Pattnaik" },
+        { id: "", title: "Madhu Jhara Fula Bane", artist: "Pranab Pattnaik, P. Sushila" },
+        { id: "", title: "E Gramara Chasha Bhai", artist: "Pranab Pattnaik" },
+        { id: "", title: "Aha Ki Badhia Jodi Tora Mora", artist: "Pranab Pattnaik, Vani Jayaram" },
+        { id: "", title: "Re Atman Nidra Parihari", artist: "Pranab Pattnaik" },
+        { id: "", title: "Aa Re Mita Aa Sangata", artist: "Sikandar Alam, Pranab Pattnaik" },
+        { id: "", title: "Shyama Ku Juhara", artist: "P. Sushila, Pranab Pattnaik" },
+        { id: "", title: "Dam Dam Dam Bhanga", artist: "Prafulla Kar" },
+        { id: "", title: "Mun Ta Manisha Marini", artist: "Md. Sikandar Alam" },
+        { id: "", title: "Dekhi Se Bana Malli", artist: "Chitta Ranjan Jena, P. Sushila" },
+        { id: "", title: "Hayre Hay Garaje Megha", artist: "Prafulla Kar" },
+        { id: "", title: "Mayabini Ei Rati Ekakini", artist: "Nirmala Mishra" },
+        { id: "", title: "E Mana Ra Sabu Katha", artist: "Old Odia classic" },
+        { id: "", title: "Tuma Bina Ei Rati", artist: "Nirmala Mishra, Pranab Pattnaik" },
+        { id: "", title: "Hrudayara Ei Sunyata Ku", artist: "Old Odia classic" },
+        { id: "", title: "Tume Mo Raati Ra Janha", artist: "Old Odia classic" },
+        { id: "", title: "Katha Kahi Kahi", artist: "Old Odia classic" },
+        { id: "", title: "Sabuja Bana Re", artist: "Old Odia classic" },
+        { id: "", title: "Phaguna Re Phaguna", artist: "Old Odia classic" },
+        { id: "", title: "Ei Akash Tale", artist: "Old Odia classic" },
+        { id: "", title: "Mo Priya Re", artist: "Old Odia classic" },
+        { id: "", title: "Rati Sukha Sare", artist: "Balakrushna Das, Trupti Das" },
+        { id: "", title: "Chandan Charchita", artist: "Shekhar Ghosh, Balakrushna Das" },
+        { id: "", title: "Badasi Jadi Kichhi Dipi", artist: "Shekhar Ghosh, Balakrushna Das" },
+        { id: "", title: "Kasturi Tilakam", artist: "Shekhar Ghosh, Balakrushna Das" },
+        { id: "", title: "Jibana Sathi", artist: "Old Odia classic" },
+        { id: "", title: "Kete Je Fula Mo Bane", artist: "Shipra Bose" },
+        { id: "", title: "Tu Ei Kula Chandrama", artist: "Pranab Pattnaik / ensemble" },
+        { id: "", title: "To Katha Mo Katha", artist: "Old Odia classic" },
+        { id: "", title: "Rati Pahi Thile", artist: "Old Odia classic" },
+        { id: "", title: "He Pashe Mo", artist: "Old Odia classic" },
+        { id: "", title: "Atmiya Swajana", artist: "Old Odia classic" }
+      ]
+    };
+
+    let currentCategory = localStorage.getItem('tapri_category') || 'hindi';
+    let currentIndex = parseInt(localStorage.getItem('tapri_index') || '0');
+    let autoPlayOnLoad = false;
+    
+    if (!SONG_REPOSITORY[currentCategory]) currentCategory = 'hindi';
+    if (isNaN(currentIndex) || currentIndex >= SONG_REPOSITORY[currentCategory].length) currentIndex = 0;
+    
+    // Parse URL params for cross-page navigation (overrides localStorage)
+    const urlParams = new URLSearchParams(window.location.search);
+    const catParam = urlParams.get('cat');
+    const idxParam = urlParams.get('idx');
+    if (catParam && SONG_REPOSITORY[catParam]) {
+      currentCategory = catParam;
+      if (idxParam !== null && !isNaN(parseInt(idxParam))) {
+        const idx = parseInt(idxParam);
+        if (idx >= 0 && idx < SONG_REPOSITORY[catParam].length) {
+          currentIndex = idx;
+          autoPlayOnLoad = true;
+        }
+      }
+    }
+
+    let isPlaying = false;
+    let ytPlayer = null;
+    let playerReady = false;
+    let seekInterval = null;
+    let isUserSeeking = false;
+    let adCheckInterval = null;
+
+    // DOM Elements
+    const playerTitle = document.getElementById('player-title');
+    const playerArtist = document.getElementById('player-artist');
+    const playerThumb = document.getElementById('player-thumb');
+    const btnPlayPause = document.getElementById('btn-play-pause');
+    const seekSlider = document.getElementById('seek-slider');
+    const seekProgress = document.getElementById('seek-progress');
+    const timeCurrent = document.getElementById('time-current');
+    const timeDuration = document.getElementById('time-duration');
+    const clockDisplay = document.getElementById('clock-display');
+    const tabHindi = document.getElementById('tab-hindi');
+    const tabOdia = document.getElementById('tab-odia');
+    const songsListRows = document.getElementById('songs-list-rows');
+    const songCount = document.getElementById('song-count');
+    const categoryTitle = document.getElementById('category-title');
+    
+    const iconPlay = '<svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+    const iconPause = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+
+    // --- SPA Routing Logic ---
+    function navigateTo(view, pushState = true) {
+      const viewHome = document.getElementById('view-home');
+      const viewSongs = document.getElementById('view-songs');
+      
+      if (view === 'songs') {
+        viewHome.classList.add('hidden');
+        viewSongs.classList.remove('hidden');
+        renderTable();
+      } else {
+        viewSongs.classList.add('hidden');
+        viewHome.classList.remove('hidden');
+      }
+      
+      if (pushState) {
+        const url = new URL(window.location);
+        url.searchParams.set('view', view);
+        window.history.pushState({view: view}, '', url);
+      }
+    }
+
+    window.addEventListener('popstate', (e) => {
+      const view = new URLSearchParams(window.location.search).get('view') || 'home';
+      navigateTo(view, false);
+    });
+    
+    // Initialize view from URL
+    const initialView = urlParams.get('view') || 'home';
+    navigateTo(initialView, false);
+
+    // --- Drawer Logic ---
+    const drawerBackdrop = document.getElementById('drawer-backdrop');
+    const drawerPanel = document.getElementById('drawer-panel');
+    const drawerContainer = document.getElementById('drawer');
+    
+    function openDrawer() {
+      drawerContainer.classList.remove('pointer-events-none');
+      void drawerContainer.offsetWidth; // trigger reflow
+      drawerBackdrop.classList.remove('opacity-0');
+      drawerPanel.classList.remove('translate-y-full');
+    }
+    
+    function closeDrawer() {
+      drawerBackdrop.classList.add('opacity-0');
+      drawerPanel.classList.add('translate-y-full');
+      setTimeout(() => {
+        drawerContainer.classList.add('pointer-events-none');
+      }, 500);
+    }
+
+    // --- Clock Logic ---
+    setInterval(() => {
+      const now = new Date();
+      clockDisplay.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }, 1000);
+    clockDisplay.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+    // --- YouTube API Logic ---
+    window.onYouTubeIframeAPIReady = function() {
+      const track = SONG_REPOSITORY[currentCategory][currentIndex];
+      ytPlayer = new YT.Player('youtube-hidden-player', {
+        height: '1', width: '1',
+        videoId: track.id,
+        playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1, 'playsinline': 1, 'rel': 0, 'modestbranding': 1 },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange,
+          'onError': onPlayerError
+        }
+      });
+    };
+
+    function onPlayerError(event) {
+      console.error("========== YOUTUBE ERROR ==========");
+      console.error("Error code:", event.data);
+      console.error("Track:", SONG_REPOSITORY[currentCategory][currentIndex]);
+      console.error("==================================");
+    }
+
+    function onPlayerReady(event) {
+      playerReady = true;
+      startSeekTracker();
+      
+      if (autoPlayOnLoad) {
+        loadTrack(currentCategory, currentIndex, true);
+      } else {
+        loadTrack(currentCategory, currentIndex, false);
+      }
+    }
+
+    function onPlayerStateChange(event) {
+      const tuningBanner = document.getElementById('tuning-banner');
+      
+      if (event.data === YT.PlayerState.PLAYING) {
+        isPlaying = true;
+        localStorage.setItem('tapri_playing', 'true');
+        btnPlayPause.innerHTML = iconPause;
+        playerThumb.classList.add('animate-[spin_20s_linear_infinite]');
+        tuningBanner.classList.add('opacity-0');
+        tuningBanner.textContent = "Tuning Signal... (Ads may play)"; // Reset text
+      } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+        isPlaying = false;
+        localStorage.setItem('tapri_playing', 'false');
+        btnPlayPause.innerHTML = iconPlay;
+        playerThumb.classList.remove('animate-[spin_20s_linear_infinite]');
+        tuningBanner.classList.add('opacity-0');
+        if (event.data === YT.PlayerState.ENDED) {
+          nextSong();
+        }
+      } else if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.UNSTARTED) {
+        if (autoPlayOnLoad || isPlaying) {
+          tuningBanner.classList.remove('opacity-0');
+        }
+      }
+    }
+
+    function formatTime(sec) {
+      if (!sec || isNaN(sec)) return "0:00";
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function startSeekTracker() {
+      if (seekInterval) clearInterval(seekInterval);
+      seekInterval = setInterval(() => {
+        if (playerReady && ytPlayer && isPlaying && !isUserSeeking) {
+          const cur = ytPlayer.getCurrentTime();
+          const dur = ytPlayer.getDuration();
+          if (dur > 0) {
+            const percent = (cur / dur) * 100;
+            seekSlider.value = percent;
+            seekProgress.style.width = percent + '%';
+            timeCurrent.textContent = formatTime(cur);
+            timeDuration.textContent = formatTime(dur);
+          }
+        }
+      }, 500);
+    }
+
+    seekSlider.addEventListener('input', () => {
+      isUserSeeking = true;
+      seekProgress.style.width = seekSlider.value + '%';
+    });
+    seekSlider.addEventListener('change', () => {
+      if (playerReady && ytPlayer) {
+        const dur = ytPlayer.getDuration();
+        ytPlayer.seekTo((seekSlider.value / 100) * dur, true);
+      }
+      isUserSeeking = false;
+    });
+
+    function loadTrack(cat, idx, autoPlay = false) {
+      currentCategory = cat;
+      currentIndex = idx;
+      
+      localStorage.setItem('tapri_category', cat);
+      localStorage.setItem('tapri_index', idx);
+      
+      const track = SONG_REPOSITORY[cat][idx];
+      
+      playerTitle.textContent = track.title;
+      playerArtist.textContent = track.artist;
+      
+      const img = new Image();
+      img.onload = () => playerThumb.src = img.src;
+      img.onerror = () => playerThumb.src = 'background.png'; 
+      img.src = `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
+      
+      if (!playerReady || !ytPlayer) return;
+      
+      if (autoPlay) {
+        document.getElementById('tuning-banner').classList.remove('opacity-0');
+        ytPlayer.loadVideoById({
+          videoId: track.id,
+          startSeconds: 0
+        });
+      } else {
+        ytPlayer.cueVideoById({
+          videoId: track.id,
+          startSeconds: 0
+        });
+      }
+      
+      // Update songs list active state
+      renderTable();
+    }
+
+    function togglePlay() {
+      if (!playerReady || !ytPlayer) return;
+      if (isPlaying) {
+        ytPlayer.pauseVideo();
+      } else {
+        ytPlayer.playVideo();
+      }
+    }
+
+    function nextSong() {
+      const list = SONG_REPOSITORY[currentCategory];
+      const nextIdx = (currentIndex + 1) % list.length;
+      loadTrack(currentCategory, nextIdx, true);
+    }
+
+    // --- Songs List View Logic ---
+    function switchCategory(cat) {
+      currentCategory = cat;
+      if (cat === 'hindi') {
+        tabHindi.classList.add('active');
+        tabOdia.classList.remove('active');
+      } else {
+        tabOdia.classList.add('active');
+        tabHindi.classList.remove('active');
+      }
+      renderTable();
+      // Optional: auto-play index 0 when clicking a tab
+      // loadTrack(cat, 0, isPlaying);
+    }
+
+    function renderTable() {
+      const list = SONG_REPOSITORY[currentCategory];
+      songCount.textContent = `${list.length} records`;
+      categoryTitle.textContent = currentCategory === 'hindi' ? 'सारे गाने' : 'ସବୁ ଗୀତ';
+      songsListRows.innerHTML = '';
+
+      list.forEach((song, idx) => {
+        const num = String(idx + 1).padStart(3, '0');
+        const isActive = (idx === currentIndex);
+        const rowHtml = `
+          <li>
+            <button type="button" class="group flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-white/5 ${isActive ? 'bg-white/10' : ''}" onclick="loadTrack('${currentCategory}', ${idx}, true)">
+              <span class="grid w-8 shrink-0 place-items-center font-mono text-[0.7rem] text-white/50 tabular-nums">
+                <span class="${isActive ? 'hidden' : 'group-hover:hidden'}">${num}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${isActive ? 'block' : 'hidden group-hover:block'} size-3.5 text-[#fce1b4]"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"></path></svg>
+              </span>
+              <div class="min-w-0 flex-1">
+                <p class="font-display text-lg leading-snug font-semibold ${isActive ? 'text-[#fce1b4]' : 'text-white'} truncate">${song.title}</p>
+                <p class="truncate text-xs text-white/60">${song.artist}</p>
+              </div>
+            </button>
+          </li>
+        `;
+        songsListRows.insertAdjacentHTML('beforeend', rowHtml);
+      });
+    }
+  </script>
+</body>
+</html>
