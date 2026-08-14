@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>91.5 TAPRI FM | Live Radio</title>
+  <title>91.5 Chai Pe Gaane | Live Radio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -84,8 +84,8 @@
 
     <!-- Center Hero Text -->
     <div class="flex-1 flex flex-col items-center justify-center -mt-16 pointer-events-none relative">
-      <h1 class="text-[5.5rem] sm:text-[9rem] font-extrabold text-[#fdf6e3] leading-none tracking-tight text-center drop-shadow-2xl" style="text-shadow: 0 10px 40px rgba(0,0,0,0.8);">टपरी<br>सैलून</h1>
-      <p class="mt-4 text-xs sm:text-sm tracking-[0.4em] uppercase text-white/70 font-mono text-center">91.5 Tapri FM - Open All Hours</p>
+      <h1 class="text-[5.5rem] sm:text-[9rem] font-extrabold text-[#fdf6e3] leading-none tracking-tight text-center drop-shadow-2xl" style="text-shadow: 0 10px 40px rgba(0,0,0,0.8);">चाय पे<br>गाने</h1>
+      <p class="mt-4 text-xs sm:text-sm tracking-[0.4em] uppercase text-white/70 font-mono text-center">91.5 Chai Pe Gaane - Open All Hours</p>
       
       <!-- Tuning / Ad Banner -->
       <div id="tuning-banner" class="absolute bottom-[-4rem] bg-[#fce1b4] text-[#1c1511] px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase opacity-0 transition-opacity duration-500 shadow-lg">
@@ -112,17 +112,17 @@
   </div>
 
   <!-- Floating Pill Player (Persistent) -->
-  <div class="fixed bottom-12 left-1/2 -translate-x-1/2 w-[92%] sm:w-[500px] bg-[#1c1511]/90 backdrop-blur-xl border border-white/10 rounded-full px-3 py-2 flex items-center justify-between shadow-2xl transition-transform duration-300 pointer-events-auto z-40" id="main-player">
+  <div class="fixed bottom-12 left-1/2 -translate-x-1/2 w-[95%] sm:w-[600px] bg-[#1c1511]/95 backdrop-blur-xl border border-white/10 rounded-full px-4 py-3 flex items-center justify-between shadow-2xl transition-transform duration-300 pointer-events-auto z-40" id="main-player">
     <!-- Album Art & Info -->
     <div class="flex items-center gap-3 flex-1 min-w-0">
-      <div class="w-12 h-12 rounded-full bg-black flex-shrink-0 overflow-hidden shadow-inner border border-white/5 relative">
+      <div class="w-14 h-14 rounded-full bg-black flex-shrink-0 overflow-hidden shadow-inner border border-white/5 relative">
         <img src="" id="player-thumb" class="w-full h-full object-cover scale-150 transition-all duration-1000">
         <div class="absolute inset-0 border-[3px] border-black/20 rounded-full pointer-events-none"></div>
       </div>
       
       <div class="flex flex-col flex-1 min-w-0 pr-4">
-        <div class="text-[#fce1b4] text-xs font-bold truncate leading-tight mb-1" id="player-title">Tuning In...</div>
-        <div class="text-[#fce1b4]/50 text-[10px] truncate uppercase tracking-wider" id="player-artist">Tapri FM</div>
+        <div class="text-[#fce1b4] text-sm font-bold truncate leading-tight mb-1" id="player-title">Tuning In...</div>
+        <div class="text-[#fce1b4]/50 text-xs truncate uppercase tracking-wider" id="player-artist">Chai Pe Gaane</div>
         
         <div class="flex items-center gap-2 mt-1">
           <span class="text-[9px] text-[#fce1b4]/40 font-mono" id="time-current">0:00</span>
@@ -136,9 +136,12 @@
     </div>
     
     <!-- Controls -->
-    <div class="flex items-center gap-1 sm:gap-3 flex-shrink-0 px-2 border-l border-white/5 pl-3">
-      <button class="w-10 h-10 rounded-full bg-[#fce1b4] text-[#1c1511] flex items-center justify-center hover:scale-105 hover:bg-white transition-all shadow-lg" onclick="togglePlay()" id="btn-play-pause">
-        <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24" id="icon-play"><path d="M8 5v14l11-7z"/></svg>
+    <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0 px-2 border-l border-white/5 pl-4">
+      <button class="w-8 h-8 rounded-full text-[#fce1b4]/60 hover:text-[#fce1b4] hover:bg-white/5 flex items-center justify-center transition-all" onclick="prevSong()">
+        <svg class="w-5 h-5 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+      </button>
+      <button class="w-12 h-12 rounded-full bg-[#fce1b4] text-[#1c1511] flex items-center justify-center hover:scale-105 hover:bg-white transition-all shadow-lg" onclick="togglePlay()" id="btn-play-pause">
+        <svg class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24" id="icon-play"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <button class="w-8 h-8 rounded-full text-[#fce1b4]/60 hover:text-[#fce1b4] hover:bg-white/5 flex items-center justify-center transition-all" onclick="nextSong()">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
@@ -161,8 +164,8 @@
       <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-8 cursor-pointer hover:bg-white/40 transition-colors" onclick="closeDrawer()"></div>
       
       <div class="max-w-2xl mx-auto w-full flex-1 overflow-y-auto no-scrollbar pb-10">
-        <h2 class="text-3xl font-extrabold mb-4 font-display">About Tapri Saloon</h2>
-        <p class="text-sm text-[#fce1b4]/70 mb-10 leading-relaxed font-mono">Welcome to 91.5 Tapri FM, a retro audio radio broadcasting classic Odia and Hindi songs from the golden cassette era. Sit back, relax, and enjoy the timeless melodies. Open 24 hours.</p>
+        <h2 class="text-3xl font-extrabold mb-4 font-display">About Chai Pe Gaane</h2>
+        <p class="text-sm text-[#fce1b4]/70 mb-10 leading-relaxed font-mono">Welcome to 91.5 Chai Pe Gaane, a retro audio radio broadcasting classic Odia and Hindi songs from the golden cassette era. Sit back, relax, and enjoy the timeless melodies. Open 24 hours.</p>
         
         <h3 class="text-lg font-bold mb-4 border-b border-white/10 pb-3 font-display uppercase tracking-widest text-[#fce1b4]/90">Radio Playlists</h3>
         <div class="flex flex-col gap-3">
@@ -223,9 +226,9 @@
     const SONG_REPOSITORY = {
       hindi: [
         { id: "A9arc2hWNOw", title: "Lag Ja Gale", artist: "Lata Mangeshkar" },
-        { id: "", title: "Aap Ki Nazron Ne Samjha", artist: "Lata Mangeshkar" },
-        { id: "", title: "Ajib Dastan Hai Yeh", artist: "Lata Mangeshkar" },
-        { id: "", title: "Aaja Piya Tohe Pyar Doon", artist: "Lata Mangeshkar" },
+        { id: "Wv-VlQMD0VY", title: "Aap Ki Nazron Ne Samjha", artist: "Lata Mangeshkar" },
+        { id: "l7GR1S-HNGo", title: "Ajib Dastan Hai Yeh", artist: "Lata Mangeshkar" },
+        { id: "VPfhI-6UnUg", title: "Aaja Piya Tohe Pyar Doon", artist: "Lata Mangeshkar" },
         { id: "", title: "Piya Tose Naina Laage Re", artist: "Lata Mangeshkar" },
         { id: "", title: "Tere Bina Zindagi Se", artist: "Lata Mangeshkar, Kishore Kumar" },
         { id: "", title: "Tum Aa Gaye Ho Noor Aa Gaya", artist: "Lata Mangeshkar, Kishore Kumar" },
@@ -717,9 +720,19 @@
       const nextIdx = (currentIndex + 1) % list.length;
       loadTrack(currentCategory, nextIdx, true);
     }
+    
+    function prevSong() {
+      const list = SONG_REPOSITORY[currentCategory];
+      const prevIdx = (currentIndex - 1 + list.length) % list.length;
+      loadTrack(currentCategory, prevIdx, true);
+    }
 
     // --- Songs List View Logic ---
     function switchCategory(cat) {
+      if (currentCategory === cat) return;
+      
+      const viewSongsDiv = document.getElementById('view-songs');
+
       currentCategory = cat;
       if (cat === 'hindi') {
         tabHindi.classList.add('active');
@@ -729,8 +742,8 @@
         tabHindi.classList.remove('active');
       }
       renderTable();
-      // Optional: auto-play index 0 when clicking a tab
-      // loadTrack(cat, 0, isPlaying);
+      
+      viewSongsDiv.scrollTop = 0;
     }
 
     function renderTable() {
