@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chai Pe Gaane | Live Radio</title>
+  
+  <!-- Priority Preload Responsive WebP Background -->
+  <link rel="preload" as="image" href="background-mobile.webp" type="image/webp" media="(max-width: 640px)" fetchpriority="high">
+  <link rel="preload" as="image" href="background.webp" type="image/webp" media="(min-width: 641px)" fetchpriority="high">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -34,6 +39,11 @@
       overflow: hidden;
       background-color: #0a0400;
     }
+    .bg-layer picture {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
     .bg-layer img {
       width: 100%; height: 100%;
       object-fit: cover;
@@ -59,8 +69,13 @@
 <body class="bg-black text-white font-display antialiased overflow-hidden selection:bg-white/20">
 
   <div class="bg-layer">
-    <img src="background-mobile.png" alt="Background Mobile" class="block sm:hidden">
-    <img src="background.png" alt="Background Desktop" class="hidden sm:block">
+    <picture>
+      <source media="(max-width: 640px)" srcset="background-mobile.webp" type="image/webp">
+      <source media="(min-width: 641px)" srcset="background.webp" type="image/webp">
+      <source media="(max-width: 640px)" srcset="background-mobile.png" type="image/png">
+      <source media="(min-width: 641px)" srcset="background.png" type="image/png">
+      <img src="background.webp" alt="Chai Pe Gaane Ambient Backdrop" class="w-full h-full object-cover" decoding="async">
+    </picture>
     <div class="vignette"></div>
   </div>
 
@@ -99,11 +114,27 @@
       <button class="pill-btn active" id="tab-hindi" onclick="switchCategory('hindi')">Old Hindi</button>
       <button class="pill-btn" id="tab-odia" onclick="switchCategory('odia')">Old Odia</button>
     </nav>
-    <header class="mb-8 pb-6 border-b border-white/10">
-      <p class="font-mono text-[0.7rem] tracking-[0.22em] uppercase text-white/50" id="song-count">120 records</p>
+    <header class="mb-6 pb-6 border-b border-white/10">
+      <div class="flex items-center justify-between">
+        <p class="font-mono text-[0.7rem] tracking-[0.22em] uppercase text-white/50" id="song-count">120 records</p>
+        <span class="text-[10px] font-mono text-[#fce1b4]/70" id="playable-count"></span>
+      </div>
       <h1 class="mt-2 font-display text-3xl leading-tight font-extrabold sm:text-5xl text-[#fce1b4]" id="category-title">सारे गाने</h1>
       <p class="mt-4 max-w-xl text-sm leading-relaxed text-white/60 font-mono">Every record in the library, listed by release order. Click a track to play it immediately.</p>
     </header>
+
+    <!-- Search / Filter Bar -->
+    <div class="relative mb-6">
+      <input 
+        type="text" 
+        id="song-search" 
+        placeholder="Search tracks or singers..." 
+        class="w-full px-4 py-2.5 pl-10 rounded-full bg-white/5 border border-white/10 text-white placeholder-white/40 text-xs font-mono focus:outline-none focus:border-[#fce1b4]/40 focus:bg-white/10 transition-all"
+        oninput="handleSearch(this.value)"
+      >
+      <svg class="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+    </div>
+
     <ol class="divide-y divide-white/5 pb-28" id="songs-list-rows">
       <!-- Tracks populated here -->
     </ol>
@@ -215,6 +246,9 @@
   >
     <div id="youtube-hidden-player"></div>
   </div>
+
+  <!-- Native HTML5 Audio Engine for Direct Storage Streams (R2/S3/CDN) -->
+  <audio id="native-audio" preload="metadata" playsinline style="display: none;"></audio>
 
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
@@ -362,19 +396,19 @@
         { id: "SpTWjwSb1Tk", title: "Premikara Bari Aare", artist: "Akshaya Mohanty" },
         { id: "MkoLViiVmkk", title: "Kabata Kholila Priye", artist: "Akshaya Mohanty" },
         { id: "C8V2eWf4FJw", title: "Gharu Bahariley", artist: "Akshaya Mohanty" },
-        { id: "", title: "Machha Hela Kata", artist: "Akshaya Mohanty" },
-        { id: "", title: "Sahira Piley", artist: "Akshaya Mohanty" },
-        { id: "", title: "Smruti Tume", artist: "Akshaya Mohanty" },
-        { id: "", title: "Chandramallika Hase", artist: "Akshaya Mohanty" },
-        { id: "", title: "Prema Kemiti Hue", artist: "Akshaya Mohanty" },
-        { id: "", title: "Mu Jauthili", artist: "Akshaya Mohanty" },
-        { id: "", title: "Tume Lautil Nahi", artist: "Various / Old Odia" },
-        { id: "", title: "Dinja Rajani Pahere", artist: "Balakrushna Das" },
-        { id: "", title: "Chanhena Chanhena Michhe", artist: "Nirmala Mishra" },
-        { id: "", title: "Tu Ki Paradeshi Nija", artist: "Old Odia classic" },
-        { id: "", title: "Mayurigo Tama Akash Mun", artist: "Mohammed Rafi" },
-        { id: "", title: "Ei Chhota Kathatie Bhulo Na", artist: "Old Odia classic" },
-        { id: "", title: "Udi Udi Udi Jaa Re", artist: "Nirmala Mishra, Pranab Pattnaik" },
+        { id: "ReVTqmVPKpE", title: "Machha Hela Kata", artist: "Akshaya Mohanty" },
+        { id: "TXuGF0aR_QM", title: "Sahira Piley", artist: "Akshaya Mohanty" },
+        { id: "2B5MxZNQDz8", title: "Smruti Tume", artist: "Akshaya Mohanty" },
+        { id: "rgH05X-CBYs", title: "Chandramallika Hase", artist: "Akshaya Mohanty" },
+        { id: "1-Wa6QqEfnE", title: "Prema Kemiti Hue", artist: "Akshaya Mohanty" },
+        { id: "_yrBwScUcvE", title: "Mu Jauthili", artist: "Akshaya Mohanty" },
+        { id: "MNhQtmAxs3w", title: "Tume Lautil Nahi", artist: "Kalyani Das" },
+        { id: "Dk_shhDfdQU", title: "Dinja Rajani Pahere", artist: "Balakrushna Das" },
+        { id: "STFYVJkn_p8", title: "Chanhena Chanhena Michhe", artist: "Nirmala Mishra" },
+        { id: "6UQYgQMXHXo", title: "Tu Ki Paradeshi Nija", artist: "Old Odia classic" },
+        { id: "9Tz5FvjN_Uo", title: "Mayurigo Tama Akash Mun", artist: "Mohammed Rafi" },
+        { id: "WW3tPwTxUHI", title: "Ei Chhota Kathatie Bhulo Na", artist: "Old Odia classic" },
+        { id: "dfj_kbmfjA0", title: "Udi Udi Udi Jaa Re", artist: "Nirmala Mishra, Pranab Pattnaik" },
         { id: "", title: "Ei Bhara Jahana Rati", artist: "Nirmala Mishra, Akshaya Mohanty" },
         { id: "", title: "Gele Gele Gele Gori", artist: "Sipra Bose, Akshaya Mohanty" },
         { id: "", title: "Jibane Sapana Jete", artist: "Old Odia classic" },
@@ -468,12 +502,50 @@
     let currentCategory = localStorage.getItem('tapri_category') || 'hindi';
     let currentIndex = parseInt(localStorage.getItem('tapri_index') || '0');
     let autoPlayOnLoad = false;
-    
+    let searchFilter = '';
+    let currentEngine = 'youtube'; // 'native' (for R2/S3 direct audio) or 'youtube'
+
+    // Helper: is track playable?
+    function isTrackPlayable(track) {
+      if (!track) return false;
+      return Boolean(track.src || (track.id && track.id.trim() !== ''));
+    }
+
+    // Helper: get next playable index
+    function getNextPlayableIndex(cat, startIdx, direction = 1) {
+      const list = SONG_REPOSITORY[cat];
+      if (!list || list.length === 0) return 0;
+      
+      const playableIndices = list
+        .map((item, i) => isTrackPlayable(item) ? i : -1)
+        .filter(i => i !== -1);
+        
+      if (playableIndices.length === 0) return 0;
+      
+      const currentPos = playableIndices.indexOf(startIdx);
+      if (currentPos === -1) {
+        if (direction >= 0) {
+          const next = playableIndices.find(i => i > startIdx);
+          return next !== undefined ? next : playableIndices[0];
+        } else {
+          const prev = [...playableIndices].reverse().find(i => i < startIdx);
+          return prev !== undefined ? prev : playableIndices[playableIndices.length - 1];
+        }
+      }
+      
+      const nextPos = (currentPos + direction + playableIndices.length) % playableIndices.length;
+      return playableIndices[nextPos];
+    }
 
     if (!SONG_REPOSITORY[currentCategory]) currentCategory = 'hindi';
     if (isNaN(currentIndex) || currentIndex >= SONG_REPOSITORY[currentCategory].length) currentIndex = 0;
     
-    // Parse URL params for cross-page navigation (overrides localStorage)
+    // Ensure initial track is playable
+    if (!isTrackPlayable(SONG_REPOSITORY[currentCategory][currentIndex])) {
+      currentIndex = getNextPlayableIndex(currentCategory, currentIndex, 1);
+    }
+
+    // Parse URL params for cross-page navigation
     const urlParams = new URLSearchParams(window.location.search);
     const catParam = urlParams.get('cat');
     const idxParam = urlParams.get('idx');
@@ -493,9 +565,10 @@
     let playerReady = false;
     let seekInterval = null;
     let isUserSeeking = false;
-    let adCheckInterval = null;
+    let bannerTimeout = null;
 
     // DOM Elements
+    const nativeAudio = document.getElementById('native-audio');
     const playerTitle = document.getElementById('player-title');
     const playerArtist = document.getElementById('player-artist');
     const playerThumb = document.getElementById('player-thumb');
@@ -509,10 +582,110 @@
     const tabOdia = document.getElementById('tab-odia');
     const songsListRows = document.getElementById('songs-list-rows');
     const songCount = document.getElementById('song-count');
+    const playableCount = document.getElementById('playable-count');
     const categoryTitle = document.getElementById('category-title');
+    const tuningBanner = document.getElementById('tuning-banner');
     
     const iconPlay = '<svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
     const iconPause = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+
+    // --- UI Toast Banner ---
+    function showBanner(text, duration = 3000) {
+      if (!tuningBanner) return;
+      tuningBanner.textContent = text;
+      tuningBanner.classList.remove('opacity-0');
+      if (bannerTimeout) clearTimeout(bannerTimeout);
+      bannerTimeout = setTimeout(() => {
+        tuningBanner.classList.add('opacity-0');
+      }, duration);
+    }
+
+    // --- MediaSession API (Lock Screen & Bluetooth Car Controls) ---
+    function updateMediaSession(track) {
+      if ('mediaSession' in navigator && track) {
+        const thumb = track.cover 
+          ? track.cover 
+          : (track.id ? `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg` : 'background.webp');
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track.title,
+          artist: track.artist,
+          album: "Chai Pe Gaane",
+          artwork: [
+            { src: thumb, sizes: '480x360', type: 'image/jpeg' },
+            { src: 'background.webp', sizes: '1672x941', type: 'image/webp' }
+          ]
+        });
+
+        try {
+          navigator.mediaSession.setActionHandler('play', togglePlay);
+          navigator.mediaSession.setActionHandler('pause', togglePlay);
+          navigator.mediaSession.setActionHandler('previoustrack', prevSong);
+          navigator.mediaSession.setActionHandler('nexttrack', nextSong);
+          navigator.mediaSession.setActionHandler('seekto', (details) => {
+            if (details.seekTime !== undefined) {
+              if (currentEngine === 'native') {
+                nativeAudio.currentTime = details.seekTime;
+              } else if (ytPlayer && playerReady) {
+                ytPlayer.seekTo(details.seekTime, true);
+              }
+            }
+          });
+        } catch (e) {
+          // Ignore unsupported media session actions in older browsers
+        }
+      }
+    }
+
+    // --- Native HTML5 Audio Event Listeners ---
+    if (nativeAudio) {
+      nativeAudio.addEventListener('play', () => {
+        isPlaying = true;
+        localStorage.setItem('tapri_playing', 'true');
+        btnPlayPause.innerHTML = iconPause;
+        playerThumb.classList.add('animate-[spin_20s_linear_infinite]');
+        if (tuningBanner) tuningBanner.classList.add('opacity-0');
+      });
+
+      nativeAudio.addEventListener('pause', () => {
+        if (currentEngine === 'native') {
+          isPlaying = false;
+          localStorage.setItem('tapri_playing', 'false');
+          btnPlayPause.innerHTML = iconPlay;
+          playerThumb.classList.remove('animate-[spin_20s_linear_infinite]');
+        }
+      });
+
+      nativeAudio.addEventListener('ended', () => {
+        if (currentEngine === 'native') nextSong();
+      });
+
+      nativeAudio.addEventListener('timeupdate', () => {
+        if (currentEngine === 'native' && !isUserSeeking) {
+          const cur = nativeAudio.currentTime;
+          const dur = nativeAudio.duration;
+          if (dur > 0) {
+            const percent = (cur / dur) * 100;
+            seekSlider.value = percent;
+            seekProgress.style.width = percent + '%';
+            timeCurrent.textContent = formatTime(cur);
+            timeDuration.textContent = formatTime(dur);
+          }
+        }
+      });
+
+      nativeAudio.addEventListener('waiting', () => {
+        if (currentEngine === 'native') showBanner("Buffering live audio...", 2000);
+      });
+
+      nativeAudio.addEventListener('error', () => {
+        if (currentEngine === 'native') {
+          console.error("Audio error", nativeAudio.error);
+          showBanner("Stream signal lost. Retuning...", 2000);
+          setTimeout(nextSong, 1500);
+        }
+      });
+    }
 
     // --- SPA Routing Logic ---
     function navigateTo(view, pushState = true) {
@@ -560,7 +733,7 @@
     
     function openDrawer() {
       drawerContainer.classList.remove('pointer-events-none');
-      void drawerContainer.offsetWidth; // trigger reflow
+      void drawerContainer.offsetWidth;
       drawerBackdrop.classList.remove('opacity-0');
       drawerPanel.classList.remove('translate-y-full');
     }
@@ -583,9 +756,10 @@
     // --- YouTube API Logic ---
     window.onYouTubeIframeAPIReady = function() {
       const track = SONG_REPOSITORY[currentCategory][currentIndex];
+      const initialId = (track && track.id) ? track.id : 'A9arc2hWNOw';
       ytPlayer = new YT.Player('youtube-hidden-player', {
         height: '1', width: '1',
-        videoId: track.id,
+        videoId: initialId,
         playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1, 'playsinline': 1, 'rel': 0, 'modestbranding': 1 },
         events: {
           'onReady': onPlayerReady,
@@ -596,10 +770,9 @@
     };
 
     function onPlayerError(event) {
-      console.error("========== YOUTUBE ERROR ==========");
-      console.error("Error code:", event.data);
-      console.error("Track:", SONG_REPOSITORY[currentCategory][currentIndex]);
-      console.error("==================================");
+      console.warn("YouTube player error:", event.data, "Track index:", currentIndex);
+      showBanner("Tuning signal disrupted. Skipping to next song...", 2500);
+      setTimeout(nextSong, 1500);
     }
 
     function onPlayerReady(event) {
@@ -614,27 +787,26 @@
     }
 
     function onPlayerStateChange(event) {
-      const tuningBanner = document.getElementById('tuning-banner');
-      
+      if (currentEngine !== 'youtube') return;
+
       if (event.data === YT.PlayerState.PLAYING) {
         isPlaying = true;
         localStorage.setItem('tapri_playing', 'true');
         btnPlayPause.innerHTML = iconPause;
         playerThumb.classList.add('animate-[spin_20s_linear_infinite]');
-        tuningBanner.classList.add('opacity-0');
-        tuningBanner.textContent = "Tuning Signal... (Ads may play)"; // Reset text
+        if (tuningBanner) tuningBanner.classList.add('opacity-0');
       } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
         isPlaying = false;
         localStorage.setItem('tapri_playing', 'false');
         btnPlayPause.innerHTML = iconPlay;
         playerThumb.classList.remove('animate-[spin_20s_linear_infinite]');
-        tuningBanner.classList.add('opacity-0');
+        if (tuningBanner) tuningBanner.classList.add('opacity-0');
         if (event.data === YT.PlayerState.ENDED) {
           nextSong();
         }
       } else if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.UNSTARTED) {
         if (autoPlayOnLoad || isPlaying) {
-          tuningBanner.classList.remove('opacity-0');
+          showBanner("Tuning Signal...", 3000);
         }
       }
     }
@@ -649,16 +821,18 @@
     function startSeekTracker() {
       if (seekInterval) clearInterval(seekInterval);
       seekInterval = setInterval(() => {
-        if (playerReady && ytPlayer && isPlaying && !isUserSeeking) {
-          const cur = ytPlayer.getCurrentTime();
-          const dur = ytPlayer.getDuration();
-          if (dur > 0) {
-            const percent = (cur / dur) * 100;
-            seekSlider.value = percent;
-            seekProgress.style.width = percent + '%';
-            timeCurrent.textContent = formatTime(cur);
-            timeDuration.textContent = formatTime(dur);
-          }
+        if (currentEngine === 'youtube' && playerReady && ytPlayer && isPlaying && !isUserSeeking) {
+          try {
+            const cur = ytPlayer.getCurrentTime();
+            const dur = ytPlayer.getDuration();
+            if (dur > 0) {
+              const percent = (cur / dur) * 100;
+              seekSlider.value = percent;
+              seekProgress.style.width = percent + '%';
+              timeCurrent.textContent = formatTime(cur);
+              timeDuration.textContent = formatTime(dur);
+            }
+          } catch (e) {}
         }
       }, 500);
     }
@@ -668,13 +842,63 @@
       seekProgress.style.width = seekSlider.value + '%';
     });
     seekSlider.addEventListener('change', () => {
-      if (playerReady && ytPlayer) {
+      if (currentEngine === 'native' && nativeAudio) {
+        const dur = nativeAudio.duration;
+        if (dur > 0) {
+          nativeAudio.currentTime = (seekSlider.value / 100) * dur;
+        }
+      } else if (playerReady && ytPlayer) {
         const dur = ytPlayer.getDuration();
         ytPlayer.seekTo((seekSlider.value / 100) * dur, true);
       }
       isUserSeeking = false;
     });
 
+    // --- Keyboard Shortcut: Spacebar to Play/Pause ---
+    window.addEventListener('keydown', (e) => {
+      // Don't intercept if user is typing in a search input, textarea, or editable field
+      const activeEl = document.activeElement;
+      const activeTag = activeEl ? activeEl.tagName.toLowerCase() : '';
+      const isEditable = activeTag === 'input' || activeTag === 'textarea' || (activeEl && activeEl.isContentEditable);
+      
+      if ((e.code === 'Space' || e.key === ' ') && !isEditable) {
+        e.preventDefault(); // Prevent page scrolling and button double-triggering
+        togglePlay();
+      }
+    });
+
+    // --- Fast Active Row UI Update (Zero Re-render overhead) ---
+    function updateActiveRow(idx) {
+      const prevActive = songsListRows.querySelector('.song-row.active');
+      if (prevActive) {
+        prevActive.classList.remove('active', 'bg-white/10');
+        const numSpan = prevActive.querySelector('.row-num');
+        const playSvg = prevActive.querySelector('.row-play-icon');
+        const titleP = prevActive.querySelector('.row-title');
+        if (numSpan) numSpan.classList.remove('hidden');
+        if (playSvg) playSvg.classList.add('hidden');
+        if (titleP) {
+          titleP.classList.remove('text-[#fce1b4]');
+          titleP.classList.add('text-white');
+        }
+      }
+
+      const nextRow = songsListRows.querySelector(`[data-song-idx="${idx}"]`);
+      if (nextRow) {
+        nextRow.classList.add('active', 'bg-white/10');
+        const numSpan = nextRow.querySelector('.row-num');
+        const playSvg = nextRow.querySelector('.row-play-icon');
+        const titleP = nextRow.querySelector('.row-title');
+        if (numSpan) numSpan.classList.add('hidden');
+        if (playSvg) playSvg.classList.remove('hidden');
+        if (titleP) {
+          titleP.classList.add('text-[#fce1b4]');
+          titleP.classList.remove('text-white');
+        }
+      }
+    }
+
+    // --- Track Loader & Dual Engine Controller ---
     function loadTrack(cat, idx, autoPlay = false) {
       currentCategory = cat;
       currentIndex = idx;
@@ -683,60 +907,122 @@
       localStorage.setItem('tapri_index', idx);
       
       const track = SONG_REPOSITORY[cat][idx];
-      
+      if (!track) return;
+
       playerTitle.textContent = track.title;
       playerArtist.textContent = track.artist;
       
+      // Update Artwork Thumbnail
+      const thumbUrl = track.cover 
+        ? track.cover 
+        : (track.id ? `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg` : 'background.webp');
+
       const img = new Image();
       img.onload = () => playerThumb.src = img.src;
-      img.onerror = () => playerThumb.src = 'background.png'; 
-      img.src = `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
+      img.onerror = () => playerThumb.src = 'background.webp'; 
+      img.src = thumbUrl;
       
-      if (!playerReady || !ytPlayer) return;
-      
-      if (autoPlay) {
-        document.getElementById('tuning-banner').classList.remove('opacity-0');
-        ytPlayer.loadVideoById({
-          videoId: track.id,
-          startSeconds: 0
-        });
-      } else {
-        ytPlayer.cueVideoById({
-          videoId: track.id,
-          startSeconds: 0
-        });
+      updateMediaSession(track);
+
+      // Branch 1: Direct Audio URL (Cloudflare R2 / S3 / Native Audio)
+      if (track.src) {
+        currentEngine = 'native';
+        if (ytPlayer && playerReady && typeof ytPlayer.pauseVideo === 'function') {
+          ytPlayer.pauseVideo();
+        }
+        nativeAudio.src = track.src;
+        if (autoPlay) {
+          nativeAudio.play().catch(e => console.warn("Native audio play request waiting for user gesture"));
+        }
+      }
+      // Branch 2: YouTube Fallback
+      else if (track.id && track.id.trim() !== '') {
+        currentEngine = 'youtube';
+        if (nativeAudio) nativeAudio.pause();
+
+        if (playerReady && ytPlayer) {
+          if (autoPlay) {
+            showBanner("Tuning Signal...", 3000);
+            ytPlayer.loadVideoById({
+              videoId: track.id,
+              startSeconds: 0
+            });
+          } else {
+            ytPlayer.cueVideoById({
+              videoId: track.id,
+              startSeconds: 0
+            });
+          }
+        }
+      } 
+      // Branch 3: Track not yet available
+      else {
+        showBanner(`"${track.title}" coming soon! Skipping to next...`, 2500);
+        setTimeout(nextSong, 1500);
+        return;
       }
       
-      // Update songs list active state
-      renderTable();
+      // Highlight row without rebuilding entire table DOM
+      updateActiveRow(idx);
     }
 
     function togglePlay() {
-      if (!playerReady || !ytPlayer) return;
-      if (isPlaying) {
-        ytPlayer.pauseVideo();
+      const track = SONG_REPOSITORY[currentCategory][currentIndex];
+      if (!isTrackPlayable(track)) {
+        showBanner("Track coming soon! Tuning next...", 2000);
+        setTimeout(nextSong, 800);
+        return;
+      }
+
+      if (currentEngine === 'native') {
+        if (isPlaying) {
+          nativeAudio.pause();
+        } else {
+          nativeAudio.play().catch(e => console.warn(e));
+        }
       } else {
-        ytPlayer.playVideo();
+        if (!playerReady || !ytPlayer) return;
+        if (isPlaying) {
+          ytPlayer.pauseVideo();
+        } else {
+          ytPlayer.playVideo();
+        }
       }
     }
 
     function nextSong() {
-      const list = SONG_REPOSITORY[currentCategory];
-      const nextIdx = (currentIndex + 1) % list.length;
+      const nextIdx = getNextPlayableIndex(currentCategory, currentIndex, 1);
       loadTrack(currentCategory, nextIdx, true);
     }
     
     function prevSong() {
-      const list = SONG_REPOSITORY[currentCategory];
-      const prevIdx = (currentIndex - 1 + list.length) % list.length;
+      const prevIdx = getNextPlayableIndex(currentCategory, currentIndex, -1);
       loadTrack(currentCategory, prevIdx, true);
+    }
+
+    function onTrackClick(cat, idx) {
+      const track = SONG_REPOSITORY[cat][idx];
+      if (!isTrackPlayable(track)) {
+        showBanner(`"${track.title}" is being digitized! Coming soon.`, 2500);
+        return;
+      }
+      loadTrack(cat, idx, true);
+    }
+
+    // --- Search & Filter Logic ---
+    function handleSearch(q) {
+      searchFilter = q.trim().toLowerCase();
+      renderTable();
     }
 
     // --- Songs List View Logic ---
     function switchCategory(cat) {
       const viewSongsDiv = document.getElementById('view-songs');
-
       currentCategory = cat;
+      searchFilter = '';
+      const searchInput = document.getElementById('song-search');
+      if (searchInput) searchInput.value = '';
+
       if (cat === 'hindi') {
         tabHindi.classList.add('active');
         tabOdia.classList.remove('active');
@@ -745,28 +1031,51 @@
         tabHindi.classList.remove('active');
       }
       renderTable();
-      
       viewSongsDiv.scrollTop = 0;
     }
 
     function renderTable() {
       const list = SONG_REPOSITORY[currentCategory];
+      const playable = list.filter(isTrackPlayable);
+      
       songCount.textContent = `${list.length} records`;
+      if (playableCount) {
+        playableCount.textContent = `${playable.length} ready to play`;
+      }
       categoryTitle.textContent = currentCategory === 'hindi' ? 'सारे गाने' : 'ସବୁ ଗୀତ';
       songsListRows.innerHTML = '';
 
+      let renderedCount = 0;
+
       list.forEach((song, idx) => {
+        // Search filter matching
+        if (searchFilter) {
+          const matchTitle = song.title.toLowerCase().includes(searchFilter);
+          const matchArtist = song.artist.toLowerCase().includes(searchFilter);
+          if (!matchTitle && !matchArtist) return;
+        }
+
+        renderedCount++;
         const num = String(idx + 1).padStart(3, '0');
         const isActive = (idx === currentIndex);
+        const playable = isTrackPlayable(song);
+
         const rowHtml = `
           <li>
-            <button type="button" class="group flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-white/5 ${isActive ? 'bg-white/10' : ''}" onclick="loadTrack('${currentCategory}', ${idx}, true)">
+            <button type="button" 
+              data-song-idx="${idx}"
+              class="song-row group flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-white/5 ${isActive ? 'active bg-white/10' : ''} ${playable ? '' : 'opacity-40 hover:opacity-60'}" 
+              onclick="onTrackClick('${currentCategory}', ${idx})"
+            >
               <span class="grid w-8 shrink-0 place-items-center font-mono text-[0.7rem] text-white/50 tabular-nums">
-                <span class="${isActive ? 'hidden' : 'group-hover:hidden'}">${num}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${isActive ? 'block' : 'hidden group-hover:block'} size-3.5 text-[#fce1b4]"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"></path></svg>
+                <span class="row-num ${isActive ? 'hidden' : 'group-hover:hidden'}">${num}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="row-play-icon ${isActive ? 'block' : 'hidden group-hover:block'} size-3.5 text-[#fce1b4]"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"></path></svg>
               </span>
               <div class="min-w-0 flex-1">
-                <p class="font-display text-lg leading-snug font-semibold ${isActive ? 'text-[#fce1b4]' : 'text-white'} truncate">${song.title}</p>
+                <div class="flex items-center gap-2">
+                  <p class="row-title font-display text-lg leading-snug font-semibold ${isActive ? 'text-[#fce1b4]' : 'text-white'} truncate">${song.title}</p>
+                  ${playable ? '' : '<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white/50 flex-shrink-0">Soon</span>'}
+                </div>
                 <p class="truncate text-xs text-white/60">${song.artist}</p>
               </div>
             </button>
@@ -774,6 +1083,14 @@
         `;
         songsListRows.insertAdjacentHTML('beforeend', rowHtml);
       });
+
+      if (renderedCount === 0) {
+        songsListRows.innerHTML = `
+          <div class="py-12 text-center text-white/40 font-mono text-xs">
+            No tracks found matching "${searchFilter}"
+          </div>
+        `;
+      }
     }
   </script>
 </body>
