@@ -100,6 +100,12 @@
       <h1 class="text-[4.5rem] sm:text-[7rem] md:text-[9rem] font-extrabold text-[#fdf6e3] leading-none tracking-tight text-center drop-shadow-2xl" style="text-shadow: 0 10px 40px rgba(0,0,0,0.8);">चाय पे<br>गाने</h1>
       <p class="mt-4 text-xs sm:text-sm tracking-[0.4em] uppercase text-white/70 font-mono text-center">Chai Pe Gaane - Open All Hours</p>
       
+      <!-- Spacebar Play Prompt Badge -->
+      <button type="button" onclick="togglePlay()" class="mt-6 pointer-events-auto inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-[#fce1b4]/50 text-white/80 hover:text-white text-xs font-mono tracking-wider backdrop-blur-md transition-all shadow-xl cursor-pointer group active:scale-95">
+        <span class="w-2 h-2 rounded-full bg-[#fce1b4] group-hover:scale-125 transition-transform animate-pulse"></span>
+        <span>Press <kbd class="px-2 py-0.5 rounded bg-white/10 text-[#fce1b4] border border-white/20 font-bold text-[11px] shadow-sm">SPACE</kbd> to <span id="hero-space-action">Start</span></span>
+      </button>
+
       <!-- Tuning / Ad Banner -->
       <div id="tuning-banner" class="absolute bottom-[-4rem] bg-[#fce1b4] text-[#1c1511] px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase opacity-0 transition-opacity duration-500 shadow-lg">
         Tuning Signal... (Ads may play)
@@ -563,6 +569,7 @@
     let isPlaying = false;
     let ytPlayer = null;
     let playerReady = false;
+    let isPendingPlay = false;
     let seekInterval = null;
     let isUserSeeking = false;
     let bannerTimeout = null;
@@ -585,6 +592,7 @@
     const playableCount = document.getElementById('playable-count');
     const categoryTitle = document.getElementById('category-title');
     const tuningBanner = document.getElementById('tuning-banner');
+    const heroSpaceAction = document.getElementById('hero-space-action');
     
     const iconPlay = '<svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
     const iconPause = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
@@ -644,6 +652,7 @@
         localStorage.setItem('tapri_playing', 'true');
         btnPlayPause.innerHTML = iconPause;
         playerThumb.classList.add('animate-[spin_20s_linear_infinite]');
+        if (heroSpaceAction) heroSpaceAction.textContent = 'Stop';
         if (tuningBanner) tuningBanner.classList.add('opacity-0');
       });
 
@@ -653,6 +662,7 @@
           localStorage.setItem('tapri_playing', 'false');
           btnPlayPause.innerHTML = iconPlay;
           playerThumb.classList.remove('animate-[spin_20s_linear_infinite]');
+          if (heroSpaceAction) heroSpaceAction.textContent = 'Start';
         }
       });
 
@@ -779,7 +789,8 @@
       playerReady = true;
       startSeekTracker();
       
-      if (autoPlayOnLoad) {
+      if (isPendingPlay || autoPlayOnLoad) {
+        isPendingPlay = false;
         loadTrack(currentCategory, currentIndex, true);
       } else {
         loadTrack(currentCategory, currentIndex, false);
@@ -794,18 +805,20 @@
         localStorage.setItem('tapri_playing', 'true');
         btnPlayPause.innerHTML = iconPause;
         playerThumb.classList.add('animate-[spin_20s_linear_infinite]');
+        if (heroSpaceAction) heroSpaceAction.textContent = 'Stop';
         if (tuningBanner) tuningBanner.classList.add('opacity-0');
       } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
         isPlaying = false;
         localStorage.setItem('tapri_playing', 'false');
         btnPlayPause.innerHTML = iconPlay;
         playerThumb.classList.remove('animate-[spin_20s_linear_infinite]');
+        if (heroSpaceAction) heroSpaceAction.textContent = 'Start';
         if (tuningBanner) tuningBanner.classList.add('opacity-0');
         if (event.data === YT.PlayerState.ENDED) {
           nextSong();
         }
       } else if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.UNSTARTED) {
-        if (autoPlayOnLoad || isPlaying) {
+        if (autoPlayOnLoad || isPlaying || isPendingPlay) {
           showBanner("Tuning Signal...", 3000);
         }
       }
@@ -854,18 +867,20 @@
       isUserSeeking = false;
     });
 
-    // --- Keyboard Shortcut: Spacebar to Play/Pause ---
+    // --- Global Keyboard Shortcut: Spacebar to Start / Stop Music ---
     window.addEventListener('keydown', (e) => {
       // Don't intercept if user is typing in a search input, textarea, or editable field
       const activeEl = document.activeElement;
       const activeTag = activeEl ? activeEl.tagName.toLowerCase() : '';
       const isEditable = activeTag === 'input' || activeTag === 'textarea' || (activeEl && activeEl.isContentEditable);
       
-      if ((e.code === 'Space' || e.key === ' ') && !isEditable) {
-        e.preventDefault(); // Prevent page scrolling and button double-triggering
+      const isSpaceKey = e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar' || e.keyCode === 32;
+
+      if (isSpaceKey && !isEditable) {
+        e.preventDefault(); // Stop default browser scrolling down & button double-triggering
         togglePlay();
       }
-    });
+    }, { capture: true });
 
     // --- Fast Active Row UI Update (Zero Re-render overhead) ---
     function updateActiveRow(idx) {
@@ -981,10 +996,28 @@
           nativeAudio.play().catch(e => console.warn(e));
         }
       } else {
-        if (!playerReady || !ytPlayer) return;
+        // If user presses Space before the YouTube API has finished initializing
+        if (!playerReady || !ytPlayer) {
+          isPendingPlay = true;
+          showBanner("Tuning in Chai Pe Gaane... Starting!", 3000);
+          return;
+        }
+
         if (isPlaying) {
           ytPlayer.pauseVideo();
         } else {
+          showBanner("Tuning Signal...", 2500);
+          // If video was cued (-1 or 5 or 0), loadVideoById ensures immediate stream playback
+          if (typeof ytPlayer.getPlayerState === 'function') {
+            const state = ytPlayer.getPlayerState();
+            if (state === -1 || state === 5 || state === 0) { // UNSTARTED, CUED, or ENDED
+              ytPlayer.loadVideoById({
+                videoId: track.id,
+                startSeconds: 0
+              });
+              return;
+            }
+          }
           ytPlayer.playVideo();
         }
       }
