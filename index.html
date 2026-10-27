@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chai Pe Gaane | Live Radio</title>
 
+    <!-- Browser Favicon / Tab Icon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="favicon.svg" />
+
     <!-- Priority Preload Responsive WebP Background -->
     <link
       rel="preload"
@@ -133,11 +137,20 @@
     <div id="view-home" class="absolute inset-0 z-10 flex flex-col p-4 sm:p-8">
       <!-- Top Nav -->
       <div class="flex justify-between items-start sm:items-center">
-        <div
-          class="font-mono text-xs tracking-[0.2em] text-white/60"
-          id="clock-display"
-        >
-          12:00 PM
+        <div class="flex items-center gap-2.5">
+          <div
+            class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/40 border border-white/15 p-1 flex items-center justify-center backdrop-blur-md shadow-inner group cursor-pointer hover:border-[#fce1b4]/50 hover:scale-105 transition-all"
+            onclick="togglePlay()"
+            title="Chai Pe Gaane - Click or press Space to play"
+          >
+            <img src="favicon.svg" alt="Chai Cup" class="w-full h-full object-contain filter drop-shadow" />
+          </div>
+          <div
+            class="font-mono text-xs tracking-[0.2em] text-white/60"
+            id="clock-display"
+          >
+            12:00 PM
+          </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 max-w-[50%] justify-end">
@@ -150,6 +163,19 @@
       <div
         class="flex-1 flex flex-col items-center justify-center -mt-16 pointer-events-none relative"
       >
+        <!-- Steaming Chai Station Emblem -->
+        <div
+          class="mb-3.5 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-black/40 backdrop-blur-md border border-white/15 p-2.5 shadow-2xl flex items-center justify-center pointer-events-auto cursor-pointer hover:scale-110 hover:border-[#fce1b4]/50 transition-all duration-300 group"
+          onclick="togglePlay()"
+          title="Chai Pe Gaane - Click or press Space to play"
+        >
+          <img
+            src="favicon.svg"
+            alt="Steaming Chai"
+            class="w-full h-full object-contain filter drop-shadow-md group-hover:drop-shadow-[0_0_12px_rgba(252,225,180,0.5)] transition-all"
+          />
+        </div>
+
         <h1
           class="text-[4.5rem] sm:text-[7rem] md:text-[9rem] font-extrabold text-[#fdf6e3] leading-none tracking-tight text-center drop-shadow-2xl"
           style="text-shadow: 0 10px 40px rgba(0, 0, 0, 0.8)"
@@ -161,6 +187,25 @@
         >
           Chai Pe Gaane - Open All Hours
         </p>
+
+        <!-- Spacebar Play Prompt Badge -->
+        <button
+          type="button"
+          onclick="togglePlay()"
+          class="mt-6 pointer-events-auto inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 hover:border-[#fce1b4]/50 text-white/80 hover:text-white text-xs font-mono tracking-wider backdrop-blur-md transition-all shadow-xl cursor-pointer group active:scale-95"
+        >
+          <span
+            class="w-2 h-2 rounded-full bg-[#fce1b4] group-hover:scale-125 transition-transform animate-pulse"
+          ></span>
+          <span
+            >Press
+            <kbd
+              class="px-2 py-0.5 rounded bg-white/10 text-[#fce1b4] border border-white/20 font-bold text-[11px] shadow-sm"
+              >SPACE</kbd
+            >
+            to <span id="hero-space-action">Start</span></span
+          >
+        </button>
 
         <!-- Tuning / Ad Banner -->
         <div
@@ -383,9 +428,14 @@
         <div
           class="max-w-2xl mx-auto w-full flex-1 overflow-y-auto no-scrollbar pb-10"
         >
-          <h2 class="text-3xl font-extrabold mb-4 font-display">
-            About Chai Pe Gaane
-          </h2>
+          <div class="flex items-center gap-3.5 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-black/40 border border-white/15 p-1.5 flex items-center justify-center flex-shrink-0 shadow-lg">
+              <img src="favicon.svg" alt="Chai Logo" class="w-full h-full object-contain" />
+            </div>
+            <h2 class="text-3xl font-extrabold font-display">
+              About Chai Pe Gaane
+            </h2>
+          </div>
           <p class="text-sm text-[#fce1b4]/70 mb-10 leading-relaxed font-mono">
             Welcome to Chai Pe Gaane, a retro audio radio broadcasting classic
             Odia and Hindi songs from the golden cassette era. Sit back, relax,
