@@ -1349,17 +1349,46 @@
         ],
       };
 
-      let currentCategory = localStorage.getItem("tapri_category") || "hindi";
-      let currentIndex = parseInt(localStorage.getItem("tapri_index") || "0");
-      let autoPlayOnLoad = false;
-      let searchFilter = "";
-      let currentEngine = "youtube"; // 'native' (for R2/S3 direct audio) or 'youtube'
-
       // Helper: is track playable?
       function isTrackPlayable(track) {
         if (!track) return false;
         return Boolean(track.src || (track.id && track.id.trim() !== ""));
       }
+
+      // Dynamically determine initial track: check storage for recent track, else first playable Hindi song
+      const storedCategory = localStorage.getItem("tapri_category");
+      const storedIndex = localStorage.getItem("tapri_index");
+
+      let currentCategory = "hindi";
+      let currentIndex = -1;
+
+      if (
+        storedCategory &&
+        SONG_REPOSITORY[storedCategory] &&
+        storedIndex !== null &&
+        !isNaN(parseInt(storedIndex, 10))
+      ) {
+        const parsedIdx = parseInt(storedIndex, 10);
+        if (
+          parsedIdx >= 0 &&
+          parsedIdx < SONG_REPOSITORY[storedCategory].length &&
+          isTrackPlayable(SONG_REPOSITORY[storedCategory][parsedIdx])
+        ) {
+          currentCategory = storedCategory;
+          currentIndex = parsedIdx;
+        }
+      }
+
+      // If no valid recent played track in storage, dynamically get the first playable song from the Hindi music list
+      if (currentIndex === -1) {
+        currentCategory = "hindi";
+        const firstHindiIdx = SONG_REPOSITORY.hindi.findIndex(isTrackPlayable);
+        currentIndex = firstHindiIdx !== -1 ? firstHindiIdx : 0;
+      }
+
+      let autoPlayOnLoad = false;
+      let searchFilter = "";
+      let currentEngine = "youtube"; // 'native' (for R2/S3 direct audio) or 'youtube'
 
       // Helper: get next playable index
       function getNextPlayableIndex(cat, startIdx, direction = 1) {
@@ -1450,9 +1479,25 @@
       const heroSpaceAction = document.getElementById("hero-space-action");
 
       const iconPlay =
-        '<svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+        '<svg class="w-5 h-5 sm:w-6 sm:h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
       const iconPause =
-        '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+        '<svg class="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+
+      // --- Centralized Playback UI & State Controller ---
+      function setPlayState(playing) {
+        isPlaying = Boolean(playing);
+        localStorage.setItem("tapri_playing", isPlaying ? "true" : "false");
+        if (btnPlayPause) {
+          btnPlayPause.innerHTML = isPlaying ? iconPause : iconPlay;
+        }
+        if (heroSpaceAction) {
+          heroSpaceAction.textContent = isPlaying ? "Stop" : "Start";
+        }
+        setSpinAnimation(isPlaying);
+        if ("mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+        }
+      }
 
       // --- Thumbnail & Fallback Helpers ---
       function showFallbackThumb() {
@@ -1517,12 +1562,18 @@
         }
       }
 
-      // Initialize Player UI with initial track details immediately
-      const initialTrack = SONG_REPOSITORY[currentCategory]?.[currentIndex];
+      // Dynamically initialize Player UI with the selected track from the music repository
+      const initialTrack = SONG_REPOSITORY[currentCategory]?.[currentIndex] || SONG_REPOSITORY.hindi[0];
       if (initialTrack) {
         if (playerTitle) playerTitle.textContent = initialTrack.title;
         if (playerArtist) playerArtist.textContent = initialTrack.artist;
         updateTrackArtwork(initialTrack);
+        if (initialTrack.src) {
+          currentEngine = "native";
+          if (nativeAudio) nativeAudio.src = initialTrack.src;
+        } else if (initialTrack.id) {
+          currentEngine = "youtube";
+        }
       } else {
         showFallbackThumb();
       }
@@ -1580,21 +1631,13 @@
       // --- Native HTML5 Audio Event Listeners ---
       if (nativeAudio) {
         nativeAudio.addEventListener("play", () => {
-          isPlaying = true;
-          localStorage.setItem("tapri_playing", "true");
-          btnPlayPause.innerHTML = iconPause;
-          setSpinAnimation(true);
-          if (heroSpaceAction) heroSpaceAction.textContent = "Stop";
+          setPlayState(true);
           if (tuningBanner) tuningBanner.classList.add("opacity-0");
         });
 
         nativeAudio.addEventListener("pause", () => {
           if (currentEngine === "native") {
-            isPlaying = false;
-            localStorage.setItem("tapri_playing", "false");
-            btnPlayPause.innerHTML = iconPlay;
-            setSpinAnimation(false);
-            if (heroSpaceAction) heroSpaceAction.textContent = "Start";
+            setPlayState(false);
           }
         });
 
@@ -1754,21 +1797,15 @@
         if (currentEngine !== "youtube") return;
 
         if (event.data === YT.PlayerState.PLAYING) {
-          isPlaying = true;
-          localStorage.setItem("tapri_playing", "true");
-          btnPlayPause.innerHTML = iconPause;
-          setSpinAnimation(true);
-          if (heroSpaceAction) heroSpaceAction.textContent = "Stop";
+          setPlayState(true);
           if (tuningBanner) tuningBanner.classList.add("opacity-0");
         } else if (
           event.data === YT.PlayerState.PAUSED ||
           event.data === YT.PlayerState.ENDED
         ) {
-          isPlaying = false;
-          localStorage.setItem("tapri_playing", "false");
-          btnPlayPause.innerHTML = iconPlay;
-          setSpinAnimation(false);
-          if (heroSpaceAction) heroSpaceAction.textContent = "Start";
+          if (event.data === YT.PlayerState.PAUSED) {
+            setPlayState(false);
+          }
           if (tuningBanner) tuningBanner.classList.add("opacity-0");
           if (event.data === YT.PlayerState.ENDED) {
             nextSong();
@@ -1894,19 +1931,30 @@
         currentCategory = cat;
         currentIndex = idx;
 
-        localStorage.setItem("tapri_category", cat);
-        localStorage.setItem("tapri_index", idx);
+        if (autoPlay || isPlaying) {
+          localStorage.setItem("tapri_category", cat);
+          localStorage.setItem("tapri_index", idx);
+        }
 
-        const track = SONG_REPOSITORY[cat][idx];
+        const track = SONG_REPOSITORY[cat]?.[idx];
         if (!track) return;
 
         playerTitle.textContent = track.title;
         playerArtist.textContent = track.artist;
 
+        // Reset seek slider to 0 for the newly loaded track
+        if (seekSlider) seekSlider.value = 0;
+        if (seekProgress) seekProgress.style.width = "0%";
+        if (timeCurrent) timeCurrent.textContent = "0:00";
+        if (timeDuration) timeDuration.textContent = "0:00";
+
         // Update Artwork Thumbnail or Fallback Icon
         updateTrackArtwork(track);
-
         updateMediaSession(track);
+
+        if (autoPlay) {
+          setPlayState(true);
+        }
 
         // Branch 1: Direct Audio URL (Cloudflare R2 / S3 / Native Audio)
         if (track.src) {
@@ -1918,15 +1966,17 @@
           ) {
             ytPlayer.pauseVideo();
           }
-          nativeAudio.src = track.src;
-          if (autoPlay) {
-            nativeAudio
-              .play()
-              .catch((e) =>
-                console.warn(
-                  "Native audio play request waiting for user gesture",
-                ),
-              );
+          if (nativeAudio) {
+            nativeAudio.src = track.src;
+            if (autoPlay) {
+              nativeAudio
+                .play()
+                .catch((e) =>
+                  console.warn(
+                    "Native audio play request waiting for user gesture",
+                  ),
+                );
+            }
           }
         }
         // Branch 2: YouTube Fallback
@@ -1947,6 +1997,9 @@
                 startSeconds: 0,
               });
             }
+          } else if (autoPlay) {
+            isPendingPlay = true;
+            showBanner("Tuning in Chai Pe Gaane... Starting!", 3000);
           }
         }
         // Branch 3: Track not yet available
@@ -1961,18 +2014,41 @@
       }
 
       function togglePlay() {
-        const track = SONG_REPOSITORY[currentCategory][currentIndex];
-        if (!isTrackPlayable(track)) {
+        const track = SONG_REPOSITORY[currentCategory]?.[currentIndex];
+        if (!track || !isTrackPlayable(track)) {
           showBanner("Track coming soon! Tuning next...", 2000);
           setTimeout(nextSong, 800);
           return;
         }
 
+        // If currently playing, pause immediately
+        if (isPlaying) {
+          setPlayState(false);
+          if (currentEngine === "native") {
+            if (nativeAudio) nativeAudio.pause();
+          } else if (ytPlayer && typeof ytPlayer.pauseVideo === "function") {
+            ytPlayer.pauseVideo();
+          }
+          return;
+        }
+
+        // If currently paused, play immediately (Immediate UI feedback: icon changes to pause, spin starts)
+        setPlayState(true);
+        showBanner("Tuning Signal...", 2500);
+
+        // Persist recent played track to storage
+        localStorage.setItem("tapri_category", currentCategory);
+        localStorage.setItem("tapri_index", currentIndex);
+
         if (currentEngine === "native") {
-          if (isPlaying) {
-            nativeAudio.pause();
-          } else {
-            nativeAudio.play().catch((e) => console.warn(e));
+          if (nativeAudio) {
+            if (!nativeAudio.src || nativeAudio.src === "" || !nativeAudio.src.includes(track.src)) {
+              nativeAudio.src = track.src;
+            }
+            nativeAudio.play().catch((e) => {
+              console.warn("Native audio play failed:", e);
+              setPlayState(false);
+            });
           }
         } else {
           // If user presses Space before the YouTube API has finished initializing
@@ -1982,10 +2058,7 @@
             return;
           }
 
-          if (isPlaying) {
-            ytPlayer.pauseVideo();
-          } else {
-            showBanner("Tuning Signal...", 2500);
+          try {
             // If video was cued (-1 or 5 or 0), loadVideoById ensures immediate stream playback
             if (typeof ytPlayer.getPlayerState === "function") {
               const state = ytPlayer.getPlayerState();
@@ -1999,6 +2072,8 @@
               }
             }
             ytPlayer.playVideo();
+          } catch (e) {
+            console.warn("YouTube play exception:", e);
           }
         }
       }
