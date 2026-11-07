@@ -153,7 +153,7 @@
             class="font-mono text-xs tracking-[0.2em] text-white/60"
             id="clock-display"
           >
-            12:00 PM
+            _ _ : _ _
           </div>
         </div>
 
@@ -292,15 +292,38 @@
       <!-- Album Art & Info -->
       <div class="flex items-center gap-3 flex-1 min-w-0">
         <div
-          class="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-black flex-shrink-0 overflow-hidden shadow-inner border border-white/5 relative"
+          class="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-black/60 flex-shrink-0 overflow-hidden shadow-inner border border-white/10 relative flex items-center justify-center"
         >
+          <!-- Fallback Music Icon (shown if image is not present or failed to load) -->
+          <div
+            id="player-thumb-fallback"
+            class="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#2a1d17] via-[#1a120c] to-[#0e0a07] text-[#fce1b4]/80 select-none shadow-inner"
+            title="Music Track"
+          >
+            <svg
+              class="w-5 h-5 sm:w-6 sm:h-6 drop-shadow"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+              ></path>
+            </svg>
+          </div>
+
+          <!-- Album Art Thumbnail -->
           <img
-            src=""
             id="player-thumb"
-            class="w-full h-full object-cover scale-150 transition-all duration-1000"
+            alt="Track Thumbnail"
+            class="hidden absolute inset-0 w-full h-full object-cover scale-150 transition-all duration-700"
+            onerror="this.classList.add('hidden'); var fb = document.getElementById('player-thumb-fallback'); if (fb) fb.classList.remove('hidden');"
           />
           <div
-            class="absolute inset-0 border-[3px] border-black/20 rounded-full pointer-events-none"
+            class="absolute inset-0 border-[3px] border-black/30 rounded-full pointer-events-none"
           ></div>
         </div>
 
@@ -1410,6 +1433,7 @@
       const playerTitle = document.getElementById("player-title");
       const playerArtist = document.getElementById("player-artist");
       const playerThumb = document.getElementById("player-thumb");
+      const playerThumbFallback = document.getElementById("player-thumb-fallback");
       const btnPlayPause = document.getElementById("btn-play-pause");
       const seekSlider = document.getElementById("seek-slider");
       const seekProgress = document.getElementById("seek-progress");
@@ -1429,6 +1453,79 @@
         '<svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
       const iconPause =
         '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+
+      // --- Thumbnail & Fallback Helpers ---
+      function showFallbackThumb() {
+        if (playerThumb) {
+          playerThumb.classList.add("hidden");
+          playerThumb.removeAttribute("src");
+        }
+        if (playerThumbFallback) {
+          playerThumbFallback.classList.remove("hidden");
+        }
+      }
+
+      function showImageThumb(src) {
+        if (!src) {
+          showFallbackThumb();
+          return;
+        }
+        if (playerThumb) {
+          playerThumb.src = src;
+          playerThumb.classList.remove("hidden");
+        }
+        if (playerThumbFallback) {
+          playerThumbFallback.classList.add("hidden");
+        }
+      }
+
+      function setSpinAnimation(spinning) {
+        [playerThumb, playerThumbFallback].forEach((el) => {
+          if (!el) return;
+          if (spinning) {
+            el.classList.add("animate-[spin_20s_linear_infinite]");
+          } else {
+            el.classList.remove("animate-[spin_20s_linear_infinite]");
+          }
+        });
+      }
+
+      function updateTrackArtwork(track) {
+        if (!track) {
+          showFallbackThumb();
+          return;
+        }
+        const thumbUrl = track.cover
+          ? track.cover
+          : track.id && track.id.trim() !== ""
+            ? `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`
+            : null;
+
+        if (thumbUrl) {
+          const img = new Image();
+          img.onload = () => {
+            if (img.naturalWidth && img.naturalWidth <= 120 && img.naturalHeight <= 90) {
+              showFallbackThumb();
+            } else {
+              showImageThumb(img.src);
+            }
+          };
+          img.onerror = () => showFallbackThumb();
+          img.src = thumbUrl;
+        } else {
+          showFallbackThumb();
+        }
+      }
+
+      // Initialize Player UI with initial track details immediately
+      const initialTrack = SONG_REPOSITORY[currentCategory]?.[currentIndex];
+      if (initialTrack) {
+        if (playerTitle) playerTitle.textContent = initialTrack.title;
+        if (playerArtist) playerArtist.textContent = initialTrack.artist;
+        updateTrackArtwork(initialTrack);
+      } else {
+        showFallbackThumb();
+      }
 
       // --- UI Toast Banner ---
       function showBanner(text, duration = 3000) {
@@ -1486,7 +1583,7 @@
           isPlaying = true;
           localStorage.setItem("tapri_playing", "true");
           btnPlayPause.innerHTML = iconPause;
-          playerThumb.classList.add("animate-[spin_20s_linear_infinite]");
+          setSpinAnimation(true);
           if (heroSpaceAction) heroSpaceAction.textContent = "Stop";
           if (tuningBanner) tuningBanner.classList.add("opacity-0");
         });
@@ -1496,7 +1593,7 @@
             isPlaying = false;
             localStorage.setItem("tapri_playing", "false");
             btnPlayPause.innerHTML = iconPlay;
-            playerThumb.classList.remove("animate-[spin_20s_linear_infinite]");
+            setSpinAnimation(false);
             if (heroSpaceAction) heroSpaceAction.textContent = "Start";
           }
         });
@@ -1660,7 +1757,7 @@
           isPlaying = true;
           localStorage.setItem("tapri_playing", "true");
           btnPlayPause.innerHTML = iconPause;
-          playerThumb.classList.add("animate-[spin_20s_linear_infinite]");
+          setSpinAnimation(true);
           if (heroSpaceAction) heroSpaceAction.textContent = "Stop";
           if (tuningBanner) tuningBanner.classList.add("opacity-0");
         } else if (
@@ -1670,7 +1767,7 @@
           isPlaying = false;
           localStorage.setItem("tapri_playing", "false");
           btnPlayPause.innerHTML = iconPlay;
-          playerThumb.classList.remove("animate-[spin_20s_linear_infinite]");
+          setSpinAnimation(false);
           if (heroSpaceAction) heroSpaceAction.textContent = "Start";
           if (tuningBanner) tuningBanner.classList.add("opacity-0");
           if (event.data === YT.PlayerState.ENDED) {
@@ -1806,17 +1903,8 @@
         playerTitle.textContent = track.title;
         playerArtist.textContent = track.artist;
 
-        // Update Artwork Thumbnail
-        const thumbUrl = track.cover
-          ? track.cover
-          : track.id
-            ? `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`
-            : "background.webp";
-
-        const img = new Image();
-        img.onload = () => (playerThumb.src = img.src);
-        img.onerror = () => (playerThumb.src = "background.webp");
-        img.src = thumbUrl;
+        // Update Artwork Thumbnail or Fallback Icon
+        updateTrackArtwork(track);
 
         updateMediaSession(track);
 
